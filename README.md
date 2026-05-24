@@ -215,4 +215,8 @@ When adding a new workflow, prefer the following pattern:
 
 ## Citation
 
-If this code is useful for your work, please cite the corresponding manuscript or thesis once available.
+This repository accompanies the following paper:
+
+N. Bongiovanni, B. Mavkov, R. Martins, and G. Allibert, “Identification and Control of a Planar Quadrotor from Visual Data Using Koopman Representations,” in *International Conference on Unmanned Aircraft Systems (ICUAS)*, 2026.
+
+If you use this code or build upon this work, please cite the paper above.
