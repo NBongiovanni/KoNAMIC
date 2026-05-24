@@ -1,0 +1,60 @@
+figures:
+  sensor_state_inclusion_dt02:
+    num_traj: 10
+    modality: "sensor"
+    dt: 0.02
+    trajectory_type: "setpoint_tracking"
+    run_status: "final"
+    task: "open_loop"
+    models:
+      - case_id: 9
+        label: '$\mathbf{x} \notin \mathbf{z}$'
+        color: "tab:orange"
+      - case_id: 10
+        label: '$\mathbf{x} \in \mathbf{z}$'
+        color: "tab:blue"
+
+  sensor_linear_vs_bilinear_final:
+    num_traj: 10
+    modality: "sensor"
+    dt: 0.01
+    trajectory_type: "setpoint_tracking"
+    run_status: "final"
+    task: "open_loop"
+    models:
+      - case_id: 5
+        label: "Bilinear"
+        color: "tab:orange"
+      - case_id: 6
+        label: "Linear"
+        color: "tab:blue"
+
+  sensor_state_inclusion_v2:
+    num_traj: 30
+    modality: "sensor"
+    dt: 0.02
+    trajectory_type: "setpoint_tracking"
+    run_status: "interim"
+    task: "open_loop"
+    models:
+      - case_id: 11
+        label: '$\mathbf{x} \notin \mathbf{z}$'
+        color: "tab:orange"
+      - case_id: 12
+        label: '$\mathbf{x} \in \mathbf{z}$'
+        color: "tab:blue"
+
+    vision_linear_vs_bilinear_final:
+      num_traj: 10
+      modality: "vision"
+      dt: 0.05
+      trajectory_type: "setpoint_tracking"
+      run_status: "final"
+      task: "open_loop"
+      models:
+        - case_id: 5
+          label: "Bilinear"
+          color: "tab:orange"
+        - case_id: 6
+          label: "Linear"
+          color: "tab:blue"

@@ -1,0 +1,104 @@
+figures:
+  sensor_bilinear_vs_pid:
+    modality: "sensor"
+    dt: 0.01
+    trajectory_type: "setpoint_tracking"
+    run_status: "final"
+    task: "control"
+    comparison_name: "sensor_bilinear_vs_pid"
+    num_columns: 2
+
+    models:
+      - case_id: 5
+        label: "Bilinear"
+        color: "tab:orange"
+
+    pid:
+      enabled: true
+      label: "PID"
+      color: "tab:blue"
+      results_path: "pid/1"
+
+  sensor_linear_vs_bilinear_plus_pid:
+    modality: "sensor"
+    dt: 0.01
+    trajectory_type: "setpoint_tracking"
+    run_status: "final"
+    task: "control"
+    comparison_name: "sensor_linear_vs_bilinear_plus_pid"
+    num_columns: 2
+
+    models:
+      - case_id: 5
+        label: "Bilinear"
+        color: "tab:orange"
+      - case_id: 6
+        label: "Linear"
+        color: "tab:blue"
+
+    pid:
+      enabled: true
+      label: "PID"
+      color: "tab:blue"
+      results_path: "pid/1"
+
+  sensor_linear_vs_bilinear:
+    modality: "sensor"
+    dt: 0.01
+    trajectory_type: "setpoint_tracking"
+    run_status: "final"
+    task: "control"
+    comparison_name: "sensor_linear_vs_bilinear"
+    num_columns: 2
+
+    models:
+      - case_id: 5
+        label: "Bilinear"
+        color: "tab:orange"
+      - case_id: 6
+        label: "Linear"
+        color: "tab:blue"
+
+    pid:
+      enabled: false
+
+  structured_vs_unstructured:
+    modality: "sensor"
+    dt: 0.01
+    trajectory_type: "setpoint_tracking"
+    run_status: "final"
+    task: "control"
+    comparison_name: "structured_vs_unstructured"
+    num_columns: 2
+
+    models:
+      - case_id: 5
+        label: "Bilinear"
+        color: "tab:orange"
+      - case_id: 6
+        label: "Linear"
+        color: "tab:blue"
+
+    pid:
+      enabled: false
+
+
+  vision_linear_vs_bilinear:
+    modality: "vision"
+    dt: 0.05
+    trajectory_type: "setpoint_tracking"
+    run_status: "final"
+    task: "control"
+    comparison_name: "vision_linear_vs_bilinear"
+    num_columns: 2
+
+    models:
+      - case_id: 21
+        label: "Bilinear"
+        color: "tab:orange"
+      - case_id: 20
+        label: "Linear"
+        color: "tab:blue"
+
+    pid:
+      enabled: false

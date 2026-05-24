@@ -1,0 +1,49 @@
+modality: "sensor"
+tracked_state_indices: [0, 1, 2]
+kp_pos: [18, 18, 36]
+ki_pos: [0.0, 0.0, 0.0]
+kd_pos: [10, 10, 12]
+kp_att: [33, 33, 33]
+ki_att: [0.0, 0.0, 0.0]
+kd_att: [10, 10, 10]
+att_cmd_alpha: 1
+moment_max: [ 0.0008, 0.0008, 0.0008 ]
+max_moment_rates: [ 0.05, 0.05, 0.01 ]
+acc_xy_max: 1.5
+thrust_min: 0.055
+thrust_max: 0.55
+phi_ref_max: 15
+theta_ref_max: 15
+deriv_filter_N: 80
+
+dt: 0.001
+num_steps_simulation: 2000
+x_init:
+  0: { value: 0, rand: false, min: -0.25, max: 0.25 }
+  1: { value: 0, rand: false, min: -0.25, max: 0.25 }
+  2: { value: 0, rand: false }
+  3: { value: 0, rand: false }
+  4: { value: 0, rand: false }
+  5: { value: 0, rand: false }
+  6: { value: 0, rand: false }
+  7: { value: 0, rand: false }
+  8: { value: 0, rand: false }
+  9: { value: 0, rand: false }
+  10: { value: 0, rand: false }
+  11: { value: 0, rand: false }
+num_simulations: 1
+plot: true
+save_images: false
+control_type: "pid"
+use_nominal_plant: false
+
+constraints:
+  use_inputs_constraints: true
+  force_limits: [ 0, 1.2 ]
+  torque_limits: [ 0, 0 ]
+
+x_ref:
+  specs:
+    0: { type: constant, value: 0.2, rand: false, min: -0.25, max: 0.25 }
+    1: { type: constant, value: 0.2, rand: false, min: -0.25, max: 0.25 }
+    2: { type: constant, value: 0.2, rand: false, min: -0.25, max: 0.25 }

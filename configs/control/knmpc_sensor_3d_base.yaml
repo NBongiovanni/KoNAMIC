@@ -1,0 +1,51 @@
+modality: "sensor"
+dt: 0.01
+num_steps_simulation: 100
+num_steps_horizon: 40
+x_init:
+  0: {value: 0, rand: false, min: -0.25, max: 0.25 }
+  1: {value: 0, rand: false, min: -0.25, max: 0.25 }
+  2: {value: 0, rand: false }
+  3: {value: 0, rand: false }
+  4: {value: 0, rand: false }
+  5: {value: 0, rand: false }
+  6: { value: 0, rand: false }
+  7: { value: 0, rand: false }
+  8: { value: 0, rand: false }
+  9: { value: 0, rand: false }
+  10: { value: 0, rand: false }
+  11: { value: 0, rand: false }
+num_simulations: 1
+plot: true
+save_images: false
+use_nominal_plant: false
+control_type: "mpc"
+
+constraints:
+  use_inputs_constraints: false
+  force_limits: [0, 1.2]
+  torque_limits: [-1, 1]
+
+x_ref:
+  specs:
+    0: { type: constant, value: 0.1, rand: false, min: -0.25, max: 0.25 }
+    1: { type: constant, value: 0.1, rand: false, min: -0.25, max: 0.25 }
+    2: { type: constant, value: 0.1, rand: false, min: -0.25, max: 0.25 }
+
+cost:
+  R: [0.01, 0.01, 0.01, 0.01]
+  S: [0.05, 0.05, 0.05, 0.05]
+  Q_positions: 2
+  Q_velocities: 2
+  P_positions: 2
+  P_velocities: 2
+
+solver_options:
+  nlp_solver_type: "SQP"
+  nlp_solver_iter_max: 15
+  nlp_tol: 1.0e-6
+  qp_solver_iter_max: 100
+  qp_tol: 1.0e-8
+  accept_suboptimal: true
+  regularization: 1.0e-6
+  print_level: 0

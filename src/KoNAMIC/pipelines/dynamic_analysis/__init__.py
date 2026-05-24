@@ -1,0 +1,2 @@
+from .bilinear_dynamics import analyse_bilinear_dynamics
+from .linear_dynamics import analyse_linear_dynamics

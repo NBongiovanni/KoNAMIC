@@ -1,0 +1,9 @@
+torch
+scipy
+tqdm
+do-mpc==4.6.5
+numpy
+scikit-learn
+matplotlib
+casadi==3.6.7
+torchinfo

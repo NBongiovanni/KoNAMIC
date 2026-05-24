@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "KoNAMIC"
+version = "1.0.0"
+description = "Model identification and control using Koopman representations of a planar quadrotor (with sensor data or visual data)."
+readme = "README.md"
+authors = [
+  { name = "Bongiovanni", email = "bongiovanni@i3s.unice.fr" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+  "torch",
+  "scipy",
+  "tqdm",
+  "do-mpc==4.6.5",
+  "numpy",
+  "scikit-learn",
+  "matplotlib",
+  "casadi",
+  "torchinfo"
+]
+
+[project.urls]
+Homepage = "https://github.com/NBongiovanni/KoNAMIC.git"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*"]
+
+[project.scripts]
+myproj-train = "KoNAMIC.main:cli"

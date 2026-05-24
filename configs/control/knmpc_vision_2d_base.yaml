@@ -1,0 +1,44 @@
+modality: "vision"
+dt: 0.05
+num_steps_simulation: 50
+num_steps_horizon: 10
+x_init:
+  0: {value: 0, rand: false, min: -0.25, max: 0.25}
+  1: {value: 0, rand: false, min: -0.25, max: 0.25}
+  2: {value: 0, rand: false}
+  3: {value: 0, rand: false}
+  4: {value: 0, rand: false}
+  5: {value: 0, rand: false}
+num_simulations: 2
+plot: true
+save_images: false
+old: false
+use_nominal_plant: false
+control_type: "mpc"
+
+constraints:
+  use_inputs_constraints: true
+  force_limits: [7.5, 12.]
+  torque_limits: [-2, 2]
+
+x_ref:
+  specs:
+     0: { type: constant, value: 0.1, rand: false, min: -0.2, max: 0.25 }
+     1: { type: constant, value: 0.1, rand: false, min: -0.2, max: 0.25 }
+
+cost:
+  R: [0.01, 0.01]
+  S: [0.05, 0.05]
+  Qz: 5
+  only_position: false
+  Pz: 3
+
+solver_options:
+  nlp_solver_type: "SQP"
+  nlp_solver_iter_max: 10
+  nlp_tol: 1.0e-6
+  qp_solver_iter_max: 100
+  qp_tol: 1.0e-8
+  accept_suboptimal: true
+  regularization: 1.0e-6
+  print_level: 0
