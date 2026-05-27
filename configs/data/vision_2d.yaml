@@ -1,0 +1,31 @@
+im_size: 512
+drone_dim: 2
+dt: 0.05
+batch_size: 32
+resolution: 128
+downsample_factor: 1
+
+train:
+  num_traj: 100
+  num_steps_loaded: 81
+  num_steps_pred: 20
+
+val_datasets:
+  - name: "short_horizon"
+    num_traj: 200
+    num_steps_loaded: 81
+    num_steps_pred: 20
+
+  - name: "long_horizon"
+    num_traj: 200
+    num_steps_loaded: 81
+    num_steps_pred: 20
+
+scaler:
+  scale_x: false
+  scale_u: true
+  center: true
+  mean_x: [0, 0, 0, 0, 0, 0]
+  mean_u: [9.81, 0]
+num_workers: 2
+delay: 1

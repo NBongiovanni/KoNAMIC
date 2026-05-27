@@ -1,0 +1,56 @@
+num_traj: 10
+dt: 0.001
+t_sim: 3.0
+
+ds_step: 10
+smooth_window: 10
+
+x_ref_max: 0.5
+y_ref_max: 0.5
+z_ref_max: 0.5
+
+x_init_max: 0.5
+y_init_max: 0.5
+z_init_max: 0.5
+angle_init_max: 15
+
+tau_ref_min: 0.05
+tau_ref_max: 0.4
+
+only_aggressive: False
+init_angles_to_zero: False
+
+seed: 1
+delay: 0
+dataset_version: 20
+batch_size: 128
+
+
+split_lengths:
+  train: 10
+  val_1: 10
+  val_2: 10
+
+scaler:
+  scale_x: true
+  scale_u: true
+  center: true
+  mean_x: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  mean_u: [0.26487, 0, 0, 0]
+num_workers: 2
+
+downsample_factor: 1
+train:
+  num_steps_loaded: 300
+  num_steps_pred: 50
+
+val_datasets:
+  - name: "short_horizon"
+    num_steps_loaded: 300
+    num_steps_pred: 50
+
+  - name: "long_horizon"
+    num_steps_loaded: 300
+    num_steps_pred: 50
+
+config_controller: "configs/control/pid_sensor_3d_base.yaml"

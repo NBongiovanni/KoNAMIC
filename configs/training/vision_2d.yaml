@@ -1,0 +1,47 @@
+model_params:
+  drone_dim: 2
+  num_views: 1
+  z_dynamics:
+    model: "linear"
+    z_dim: 10
+    structured_AB: true
+    affine_term: false
+  dt: 0.05
+  auto_encoder:
+    include_state_in_z: false
+    multi_view: false
+    control_inputs: false
+    H: 128
+    W: 128
+    CNN:
+      encoder:
+        num_in_channels: 2
+        out_planes: [28, 48, 64, 48, 28]
+        strides: [ 2, 2, 2, 2, 2 ]
+        n_split_layers: 0
+      decoder:
+        num_out_channels: 1
+        out_planes: [28, 48, 64, 48, 28]
+        strides: [ 2, 2, 2, 2, 2 ]
+    MLP:
+      num_hidden_layers: 2
+      hidden_dims: [ 256, 192 ]
+    activation: "relu"
+
+training_params:
+  drone_dim: 2
+  closed_loop_every: 0
+  closed_loop_replay_enabled: false
+  num_epochs: 1200
+  checkpoint_every: 10
+  loss_weights: {y_pred: 250.0, y_rec: 40.0, z: 5.0, c: 0.4, a: 0.05}
+  bilin_reg: false
+  optimizer:
+    lr:
+      ab: 0.001
+      ae: 0.001
+    weight_decay: {ae: 8.0e-05, ab: 8.0e-05}
+  lr_decay: 0.996
+  curriculum:
+    phase_epoch_triggers: [ 2, 75, 100 ]
+    ramp_duration: 10

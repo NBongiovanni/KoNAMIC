@@ -14,7 +14,8 @@ model_params:
     activation: "tanh"
 
 training_params:
-  closed_loop_every: 1
+  closed_loop_every: 0
+  closed_loop_replay_enabled: false
   num_epochs: 1400
   checkpoint_every: 10
   loss_weights: { pred_x: 10, pred_z: 1, rec: 5 }
@@ -23,34 +24,8 @@ training_params:
     lr: 0.0012
   lr_decay: 0.996
 
-dataset_params:
-  dataset_version: 20
-  batch_size: 64
-  downsample_factor: 1
-  train:
-    num_steps_loaded: 300
-    num_steps_pred: 50
-
-  val_datasets:
-    - name: "short_horizon"
-      num_steps_loaded: 300
-      num_steps_pred: 50
-
-    - name: "long_horizon"
-      num_steps_loaded: 300
-      num_steps_pred: 50
-
-  scaler:
-    scale_x: true
-    scale_u: true
-    center: true
-    mean_x: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    mean_u: [0.26487, 0, 0, 0]
-  num_workers: 2
-  delay: 0
-
 closed_loop_augmentation:
-  enabled: true
+  enabled: false
   control_config: configs/control/knmpc_sensor_2d_base.yaml
   frequency: 5
   num_rollouts: 20
