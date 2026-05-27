@@ -6,7 +6,7 @@ from typing import Final
 
 import yaml
 
-from .path_utils import find_project_root
+from .paths.path_utils import find_project_root
 
 
 @dataclass(frozen=True)

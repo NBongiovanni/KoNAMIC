@@ -30,11 +30,16 @@ SensorModelAndTC: TypeAlias = tuple[SensorKoopModel, TrainingContext]
 VisionModelAndScaler: TypeAlias = tuple[VisionKoopModel, StandardScaler]
 SensorModelAndScaler: TypeAlias = tuple[SensorKoopModel, StandardScaler, StandardScaler]
 
+def init_model(modality: str, model_params: dict, training_params: dict):
+    if modality == "sensor":
+        return init_sensor_model(model_params, training_params)
+    elif modality == "vision":
+        return init_vision_model(model_params, training_params)
+    else:
+        raise ValueError("Unknown modality")
 
-def init_vision_koop_model(
-    model_params: dict,
-    training_params: dict,
-) -> VisionModelAndTC:
+
+def init_vision_model(model_params: dict, training_params: dict):
     """
     Initialize a fresh Koopman model and its training context.
 
@@ -60,16 +65,7 @@ def init_vision_koop_model(
     return model, training_context
 
 
-def init_koop_model(modality: str, model_params: dict, training_params: dict):
-    if modality == "sensor":
-        return init_sensor_model(model_params, training_params)
-    elif modality == "vision":
-        return init_vision_koop_model(model_params, training_params)
-    else:
-        raise ValueError("Unknown modality")
-
-
-def init_sensor_model(model_params: dict, training_params: dict) -> SensorModelAndTC:
+def init_sensor_model(model_params: dict, training_params: dict):
     model, device = _build_sensor_model(model_params)
 
     optimizer_cfg = training_params["optimizer"]
@@ -127,8 +123,8 @@ def _build_vision_model(
             z = self.ae.project(y, u)
             y_rec = self.ae.reconstruct(z)
             return y_rec
-
-    summary(AEOnly(model), input_size=(1, 6, 128, 128), depth=5)
+    if multi_view:
+        summary(AEOnly(model), input_size=(1, 6, 128, 128), depth=5)
     return model, device
 
 
@@ -162,10 +158,7 @@ def _get_dynamics_parameters(model: VisionKoopModel) -> list[torch.nn.Parameter]
     return list(model.z_drift.parameters()) + list(model.z_act.parameters())
 
 
-def _make_optimizer_vision(
-    hparams: dict,
-    model: VisionKoopModel,
-) -> Optimizer:
+def _make_optimizer_vision(hparams: dict, model: VisionKoopModel) -> Optimizer:
     lr_ae = hparams["lr"]["ae"]
     lr_ab = hparams["lr"]["ab"]
     wd_ae = hparams["weight_decay"]["ae"]

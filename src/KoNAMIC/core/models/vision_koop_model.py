@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 
-from KoNAMIC.pipelines.data_pipeline import compute_centroids_diff, compute_angles_diff
+from KoNAMIC.core.rendering.features.geometric_features_diff import compute_centroids_diff, compute_angles_diff
 from KoNAMIC.core.models.outputs.vision_outputs import Rec, Pred, ForwardOutputs
 from .base_koop_model import BaseKoopModel
 from KoNAMIC.core.models.nn.auto_encoder import AutoEncoder
@@ -11,8 +11,7 @@ class VisionKoopModel(BaseKoopModel):
     def __init__(self, model_params: dict, auto_encoder: AutoEncoder):
         super().__init__(model_params)
         self.auto_encoder = auto_encoder
-        self.num_views = model_params["drone"]["num_views"]
-        self.parameters_to_prune = self.get_prunable_params()
+        self.num_views = model_params["num_views"]
 
     # -------- AE I/O (vision) ----------
     def project(self, y: Tensor, u: Tensor) -> Tensor:
@@ -30,6 +29,7 @@ class VisionKoopModel(BaseKoopModel):
             u_traj: Tensor,
             num_steps: int,
     ) -> ForwardOutputs:
+
         device = y_init.device
         batch_size = y_init.shape[0]
         H, W = y_init.shape[-2:]

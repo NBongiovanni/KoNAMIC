@@ -142,7 +142,7 @@ class ClosedLoopFactory:
                 self.epoch,
                 paths,
             )
-            utils.save_config_yaml(
+            utils.save_yaml(
                 control_params,
                 paths.closed_loop_eval_dir,
                 "control_params.yaml",
@@ -158,7 +158,7 @@ class ClosedLoopFactory:
                 self.controller_type,
             )
 
-            utils.save_config_yaml(
+            utils.save_yaml(
                 control_params,
                 paths.closed_loop_eval_dir,
                 "control_params.yaml",
@@ -191,7 +191,7 @@ class ClosedLoopFactory:
             ctx.paths,
         )
 
-        utils.save_config_yaml(
+        utils.save_yaml(
             ctx.control_params,
             ctx.paths.closed_loop_eval_dir,
             "control_params.yaml",

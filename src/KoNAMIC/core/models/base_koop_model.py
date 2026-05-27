@@ -35,7 +35,7 @@ class BaseKoopModel(nn.Module):
         # (your training code likely sets self.z_star somewhere)
         self.z_star: Tensor | None = None
 
-    def forward(self, x_init: Tensor, u_traj: Tensor, num_steps: int):
+    def forward(self, y_init: Tensor, u_traj: Tensor, num_steps: int):
         raise NotImplementedError("Must be implemented by subclass.")
 
     def forward_controlled(self, x_init: Tensor, u_traj: Tensor, num_steps: int):

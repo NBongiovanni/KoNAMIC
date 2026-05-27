@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 from torch import Tensor
 
-from KoNAMIC.pipelines.data_pipeline import compute_angles_diff, compute_centroids_diff
+from KoNAMIC.core.rendering.features.geometric_features_diff import compute_angles_diff, compute_centroids_diff
 from KoNAMIC.core.models import GroundTruth
 
 

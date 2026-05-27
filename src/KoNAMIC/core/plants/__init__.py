@@ -1,3 +1,2 @@
 from .plant import Plant
-from .quadrotors import PlanarQuad, Quad3D
-from .learned_model import LearnedModel
+from .quadrotors import Quad2D, Quad3D, build_quad_plant

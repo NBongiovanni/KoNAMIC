@@ -2,8 +2,8 @@ from pathlib import Path
 import os
 import numpy as np
 
-from KoNAMIC.pipelines.data_pipeline.vision_data.quad_drawer.quad_drawer_2d import QuadDrawer2D
-from KoNAMIC.pipelines.data_pipeline.vision_data.quad_drawer.quad_drawer_3d_n_views import QuadDrawer3DNViews
+from KoNAMIC.pipelines.data_pipeline.vision_data.rendering.quad_drawer_2d import QuadDrawer2D
+from KoNAMIC.pipelines.data_pipeline.vision_data.rendering.quad_drawer_3d_multi_views import QuadDrawer3DNViews
 
 
 class StateRenderer2D(QuadDrawer2D):

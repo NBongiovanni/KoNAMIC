@@ -55,14 +55,14 @@ class SensorKoopModel(BaseKoopModel):
 
     def forward(
         self,
-        x_init: Tensor,
+        y_init: Tensor,
         u_traj: Tensor,
         num_steps: int,
     ) -> tuple[Tensor, Pred]:
 
         device = next(self.parameters()).device
         batch_size = u_traj.shape[0]
-        dtype = x_init.dtype
+        dtype = y_init.dtype
 
         x_pred = torch.zeros(
             (batch_size, num_steps, self.x_dim),
@@ -75,7 +75,7 @@ class SensorKoopModel(BaseKoopModel):
             dtype=dtype
         )
 
-        z_init_k = self.project(x_init.float())
+        z_init_k = self.project(y_init.float())
         x_rec_k = self.reconstruct(z_init_k)
 
         z_pred[:, 0] = z_init_k

@@ -42,6 +42,24 @@ class TrainingConfig:
             control_params=control_params,
         )
 
+    @classmethod
+    def load_base_config(cls, name: str, modality: str, drone_dim: int) -> "TrainingConfig":
+        root = utils.find_project_root()
+
+        training_config_path = root / "configs" / "training" / f"{name}.yaml"
+        control_config_path = root / "configs" / "control" / f"knmpc_{modality}_{drone_dim}d_base.yaml"
+        dataset_config_path = root / "configs" / "data" / f"{modality}_{drone_dim}d.yaml"
+
+        params = utils.load_yaml(training_config_path)
+        control_params = utils.load_yaml(control_config_path)
+        dataset_params = utils.load_yaml(dataset_config_path)
+
+        return cls.from_dict(
+            params=params,
+            control_params=control_params,
+            dataset_params=dataset_params,
+        )
+
     def to_dict(self) -> dict:
         return {
             "dataset_params": self.dataset_params,
@@ -49,16 +67,6 @@ class TrainingConfig:
             "model_params": self.model_params,
             "control_params": self.control_params,
         }
-
-    @classmethod
-    def load_config(cls, name: str, modality: str, drone_dim: int):
-        params, control_params, dataset_params = utils.load_base_configs(
-            config=name,
-            task="training",
-            modality=modality,
-            drone_dim=drone_dim,
-        )
-        return cls.from_dict(params, control_params, dataset_params)
 
     def sync_shared_params(self) -> None:
         drone_dim = self.model_params["drone_dim"]
@@ -71,7 +79,6 @@ class TrainingConfig:
 
     def apply_cli_options(self, args: Namespace) -> None:
         self.model_params["z_dynamics"]["model"] = args.dynamics
-
         if args.modality == "sensor":
             self.model_params["auto_encoder"]["include_state_in_z"] = args.state_in_z
             if args.state_in_z:

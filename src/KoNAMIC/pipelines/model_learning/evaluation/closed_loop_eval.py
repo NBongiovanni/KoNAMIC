@@ -6,7 +6,7 @@ import os
 from sklearn.preprocessing import StandardScaler
 
 from KoNAMIC.core.drone import DroneSpec
-from KoNAMIC.core.plants import Quad3D
+from KoNAMIC.core.plants import Quad3D, build_quad_plant
 from KoNAMIC.core.models import SensorKoopModel
 from KoNAMIC.core.simulation import ClosedLoopTrajectory
 from KoNAMIC.core.control.controllers import KoopmanMPCController
@@ -38,10 +38,9 @@ class ClosedLoopEval:
         self.drone = drone
         self.u_scaler = u_scaler
         self.x_scaler = x_scaler
+        self.plant = build_quad_plant(self.drone, self.model_params["dt"])
 
     def run_simulation(self) -> list[ClosedLoopTrajectory]:
-        plant = Quad3D(self.model_params["dt"], self.drone)
-
         with suppress_stdout_stderr_fd():
             controller = KoopmanMPCController(
                 model_params=self.model_params,
@@ -51,7 +50,7 @@ class ClosedLoopEval:
                 u_scaler=self.u_scaler,
                 x_scaler=self.x_scaler,
             )
-            simulator = RealControlSimulator(self.control_params, plant, controller)
+            simulator = RealControlSimulator(self.control_params, self.plant, controller)
 
             references_factory = create_reference_builder_factory(
                 controller_type="koopman_mpc",

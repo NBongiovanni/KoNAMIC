@@ -4,7 +4,7 @@ from .checkpoints import (
     load_sensor_koop_model_for_eval,
     load_koop_model_for_eval,
 )
-from .factory import init_koop_model, TrainingContext
+from .factory import init_model, TrainingContext
 from .vision_koop_model import VisionKoopModel
 from .sensor_koop_model import SensorKoopModel
 from .base_koop_model import BaseKoopModel

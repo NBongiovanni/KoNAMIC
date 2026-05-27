@@ -5,6 +5,7 @@ from .base_controller import BaseController
 from .lqr_controller import LQRController
 from .pid_controller import PIDController
 from .pid_pos_att_controller import PIDPosAttController
+from .pid_planar_pos_att_controller import PIDPlanarPosAttController
 
 __all__ = [
     "BaseController",

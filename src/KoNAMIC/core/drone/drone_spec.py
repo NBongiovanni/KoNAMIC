@@ -27,7 +27,7 @@ class DroneSpec:
     # Core definition
     # ------------------------------------------------------------------
     name: str
-    drone_dim: int  # 1, 2, or 3
+    drone_dim: int
 
     # ------------------------------------------------------------------
     # Physical parameters
@@ -157,13 +157,6 @@ class DroneSpec:
     # ------------------------------------------------------------------
     # Physics helpers (minimal but useful)
     # ------------------------------------------------------------------
-    @property
-    def hover_thrust(self) -> float:
-        """
-        Total thrust required to hover.
-        """
-        return self.mass * self.gravity
-
     @property
     def inertia_matrix(self) -> Optional[np.ndarray]:
         """

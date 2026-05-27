@@ -15,6 +15,7 @@ from .factory import (
     _build_sensor_model
 )
 
+
 def load_vision_koop_model_for_train(
         model_params: dict,
         training_params: dict,

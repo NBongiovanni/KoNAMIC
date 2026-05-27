@@ -5,7 +5,17 @@ from KoNAMIC.core.drone import DroneSpec
 from .plant import Plant
 
 
-class PlanarQuad(Plant):
+def build_quad_plant(drone: DroneSpec, dt):
+    if drone.drone_dim == 2:
+        return Quad2D(dt, drone)
+
+    if drone.drone_dim == 3:
+        return Quad3D(dt, drone)
+
+    raise ValueError(f"Unsupported drone_dim: {drone.drone_dim}")
+
+
+class Quad2D(Plant):
     """
     2D planar quad model.
     State: [y, z, theta, y_dot, z_dot, theta_dot] (6)

@@ -31,6 +31,7 @@ class KoopmanMPCController(MPCControllerBase):
         u_scaler: StandardScaler,
         x_scaler: Optional[StandardScaler] = None,
     ) -> None:
+
         self.model_params = model_params
         self.control_params = control_params
         self.koop_model = koop_model

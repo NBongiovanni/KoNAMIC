@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import random
-import  torch
+import torch
 
 
 def set_seed_light(seed: int):

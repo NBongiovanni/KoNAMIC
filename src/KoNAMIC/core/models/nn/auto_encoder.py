@@ -66,24 +66,50 @@ class AutoEncoder(nn.Module):
         w = self.decoder_mlp(z)
         return self.decoder_cnn(w)
 
-    def forward(self, y: Tensor) -> Tensor:
-        z = self.project(y)
+    def forward(self, y: Tensor, u: Tensor | None = None) -> Tensor:
+        z = self.project(y, u)
         return self.reconstruct(z)
 
-    def batch_projection(self, y_gt: Tensor, chunk_size: int = 32) -> Tensor:
+    def batch_projection(
+            self,
+            y_gt: Tensor,
+            u_traj: Tensor | None = None,
+            chunk_size: int = 32,
+    ) -> Tensor:
         """
-        y_gt: (B, T, C, H, W)
+        y_gt:   (B, T, C, H, W)
+        u_traj: (B, T, u_dim), required if control_inputs=True
         returns: (B, T, z_dim)
         """
         assert y_gt.dim() == 5, f"Expected (B,T,C,H,W), got {tuple(y_gt.shape)}"
-        b_size, n_steps, C, H, W = y_gt.shape
 
-        # on infère C, H, W depuis le tenseur
+        b_size, n_steps, C, H, W = y_gt.shape
         y_gt_flat = y_gt.reshape(b_size * n_steps, C, H, W).contiguous()
+
+        if self.control_inputs:
+            if u_traj is None:
+                raise ValueError("u_traj is required when control_inputs=True")
+
+            assert u_traj.dim() == 3, f"Expected (B,T,u_dim), got {tuple(u_traj.shape)}"
+            assert u_traj.shape[0] == b_size and u_traj.shape[1] == n_steps, (
+                f"Incompatible shapes: y_gt={tuple(y_gt.shape)}, "
+                f"u_traj={tuple(u_traj.shape)}"
+            )
+
+            u_dim = u_traj.shape[-1]
+            u_flat = u_traj.reshape(b_size * n_steps, u_dim).contiguous()
+        else:
+            u_flat = None
 
         z_chunks = []
         for i in range(0, y_gt_flat.size(0), chunk_size):
-            z_chunks.append(self.project(y_gt_flat[i:i + chunk_size]))
+            y_chunk = y_gt_flat[i:i + chunk_size]
+
+            if self.control_inputs:
+                u_chunk = u_flat[i:i + chunk_size]
+                z_chunks.append(self.project(y_chunk, u_chunk))
+            else:
+                z_chunks.append(self.project(y_chunk, None))
 
         z_proj_flat = torch.cat(z_chunks, dim=0)
         return z_proj_flat.reshape(b_size, n_steps, self.z_dim)
