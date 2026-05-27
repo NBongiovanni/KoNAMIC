@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 from KoNAMIC.core import utils
 from KoNAMIC.core.drone import build_drone
-from KoNAMIC.core.models import init_koop_model
-from KoNAMIC.pipelines.model_learning import (
-    Trainer, generate_run_paths, TrainingConfig, build_arg_parser
-)
-from KoNAMIC.pipelines.data_pipeline import StateInputsDatasetBuilder
+from KoNAMIC.core.models import init_model
+from KoNAMIC.pipelines.model_learning import Trainer, generate_run_paths, TrainingConfig, parse_learning_args
+from KoNAMIC.pipelines.data_pipeline.sensor_data import SensorDatasetBuilder
 
 
 def main() -> None:
-    args = build_arg_parser().parse_args()
+    args = parse_learning_args()
     logger = utils.setup_logging()
     utils.set_seed(args.seed)
 
@@ -21,24 +19,24 @@ def main() -> None:
         args.id,
         logger
     )
-    run_config = TrainingConfig.load_config(
+    run_config = TrainingConfig.load_base_config(
         name=args.config, modality=args.modality, drone_dim=args.drone_dim
     )
     run_config.sync_shared_params()
     run_config.apply_cli_options(args)
     run_config.define_paths(paths)
     params = run_config.to_dict()
-    utils.save_config_yaml(params)
+    utils.save_yaml(params)
 
     model_params = run_config.model_params
     training_params = run_config.training_params
     dataset_params = run_config.dataset_params
     control_params = run_config.control_params
 
-    model, training_ctx = init_koop_model(
+    model, training_ctx = init_model(
         args.modality, model_params, training_params
     )
-    state_dataset_builder = StateInputsDatasetBuilder(dataset_params, args.drone_dim)
+    state_dataset_builder = SensorDatasetBuilder(dataset_params, args.drone_dim)
     dataloader = state_dataset_builder.data_loader
     state_dataset_builder.save_scalers(paths.run_dir)
 
