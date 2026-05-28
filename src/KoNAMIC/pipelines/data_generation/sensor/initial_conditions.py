@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from .params import SensorDatasetParams
+from .sensor_generation_config import SensorGenerationConfig
 from .profile import Profile
 from .references import rand_uniform_sym
 
 
 def sample_initial_condition(
     *,
-    cfg: SensorDatasetParams,
+    cfg: SensorGenerationConfig,
     profile: Profile,
     rng: np.random.Generator,
     drone,
@@ -39,7 +39,7 @@ def sample_initial_condition(
 
 def sample_initial_condition_2d(
     *,
-    cfg: SensorDatasetParams,
+    cfg: SensorGenerationConfig,
     profile: Profile,
     rng: np.random.Generator,
     angle_max: float,
@@ -63,7 +63,7 @@ def sample_initial_condition_2d(
 
 def sample_initial_condition_3d(
     *,
-    cfg: SensorDatasetParams,
+    cfg: SensorGenerationConfig,
     profile: Profile,
     rng: np.random.Generator,
     angle_max: float,

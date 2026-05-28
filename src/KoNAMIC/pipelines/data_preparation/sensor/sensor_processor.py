@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
 from sklearn.preprocessing import StandardScaler
 
-class Processor:
+class SensorProcessor:
     def __init__(
             self,
             batch_size: int,
@@ -95,31 +95,53 @@ class Processor:
         )
 
     def process_datasets(self) -> None:
-        n_steps_train = self.train_datasets_specs["num_steps_pred"]
-        self.processed_datasets = {"train": self._process_dataset("train", n_steps_train)}
+        self.processed_datasets = {
+            "train": self._process_dataset(
+                phase="train",
+                num_steps_loaded=self.train_datasets_specs["num_steps_loaded"],
+                window_size=self.train_datasets_specs["num_steps_pred"],
+            )
+        }
 
-        n_steps_val_1 = self.val_1_datasets_specs["num_steps_pred"]
-        self.processed_datasets["val_1"] = self._process_dataset("val_1", n_steps_val_1)
+        self.processed_datasets["val_1"] = self._process_dataset(
+            phase="val_1",
+            num_steps_loaded=self.val_1_datasets_specs["num_steps_loaded"],
+            window_size=self.val_1_datasets_specs["num_steps_pred"],
+        )
 
-        n_steps_val_2 = self.val_2_datasets_specs["num_steps_pred"]
-        self.processed_datasets["val_2"] = self._process_dataset("val_2", n_steps_val_2)
+        self.processed_datasets["val_2"] = self._process_dataset(
+            phase="val_2",
+            num_steps_loaded=self.val_2_datasets_specs["num_steps_loaded"],
+            window_size=self.val_2_datasets_specs["num_steps_pred"],
+        )
 
-    def _process_dataset(self, phase: str, window_size: int) -> dict:
+    def _process_dataset(
+            self,
+            phase: str,
+            num_steps_loaded: int | None,
+            window_size: int,
+    ) -> dict:
         u = self.raw_datasets[phase]["u"]
-        u_sliced = self._slice_and_scale(u, self.u_scaler, window_size)
         x = self.raw_datasets[phase]["x"]
+
+        if num_steps_loaded is not None:
+            u = u[:, :num_steps_loaded, :]
+            x = x[:, :num_steps_loaded, :]
+
+        u_sliced = self._slice_and_scale(u, self.u_scaler, window_size)
 
         if self.scaler_specs["scale_x"]:
             x_sliced = self._slice_and_scale(x, self.x_scaler, window_size)
         else:
             x_sliced = self._slice_and_scale(x, None, window_size)
+
         return {"x": x_sliced, "u": u_sliced}
 
     def _slice_and_scale(
-            self,
-            array: np.ndarray,
-            scaler: StandardScaler | None,
-            window_size: int
+        self,
+        array: np.ndarray,
+        scaler: StandardScaler | None,
+        window_size: int
     ) -> np.ndarray:
 
         arr = array.astype(np.float32)
@@ -136,9 +158,9 @@ class Processor:
 
     @staticmethod
     def fit_standardizer(
-            data: np.ndarray,
-            standardizer: StandardScaler,
-            flattened=False
+        data: np.ndarray,
+        standardizer: StandardScaler,
+        flattened=False
     ) -> StandardScaler:
         if flattened:
             data_flat = data
@@ -150,7 +172,7 @@ class Processor:
 
     @staticmethod
     def apply_scaler_dataset(
-            data: np.ndarray, scaler: StandardScaler | None
+        data: np.ndarray, scaler: StandardScaler | None
     ) -> np.ndarray:
         if scaler is None:
             return data

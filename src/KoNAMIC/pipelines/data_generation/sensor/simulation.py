@@ -1,11 +1,12 @@
 import numpy as np
 
-from .params import TrajectoryResult, SensorDatasetParams
+from .sensor_generation_config import SensorGenerationConfig
+from .dataset import TrajectoryResult, Dataset
 
 
 def simulate_trajectory(
     *,
-    cfg: SensorDatasetParams,
+    cfg: SensorGenerationConfig,
     drone,
     plant,
     controller,

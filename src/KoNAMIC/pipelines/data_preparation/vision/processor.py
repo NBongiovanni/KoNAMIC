@@ -8,13 +8,13 @@ import numpy as np
 from tqdm import tqdm
 
 from KoNAMIC.core.utils import build_dataset_paths
-from .params import VisionDatasetParams
+from .vision_preparation_config import VisionPreparationConfig
 
 
-class ImageProcessor:
+class VisionProcessor:
     def __init__(
             self,
-            params: VisionDatasetParams,
+            params: dict,
             phase: str,
             dataset_stamp: str,
             num_steps_loaded: int,
@@ -25,30 +25,27 @@ class ImageProcessor:
         self.phase = phase
         self.dataset_stamp = dataset_stamp
         self.num_steps_loaded = num_steps_loaded
+        self.drone_dim = params["drone_dim"]
 
-        self.dataset_paths = build_dataset_paths(
-            drone_dim=self.params.drone_dim,
-            dataset_stamp=str(self.dataset_stamp),
-        )
-
+        self.dataset_paths = build_dataset_paths(self.drone_dim, self.dataset_stamp)
         self.dataset_states = None
         self.dataset_inputs = None
         self.dataset_idx = None
         self.traj_len = num_steps_loaded
 
-    def pipeline(self, num_simulations: int, im_size: int, num_steps_pred: int) -> None:
+    def pipeline(self, num_traj: int, im_size: int, num_steps_pred: int) -> None:
         save_dir = self._define_save_dir()
         save_dir.mkdir(parents=True, exist_ok=True)
 
         traj_len = self.traj_len
         H = W = im_size
 
-        if self.params.drone_dim == 3:
+        if self.drone_dim == 3:
             views = ["left", "right"]
-        elif self.params.drone_dim == 2:
+        elif self.drone_dim == 2:
             views = [None]
         else:
-            raise ValueError(f"Unsupported drone_dim: {self.params.drone_dim}")
+            raise ValueError(f"Unsupported drone_dim: {self.drone_dim}")
 
         V = len(views)
 
@@ -62,7 +59,7 @@ class ImageProcessor:
             im_path,
             dtype=np.uint8,
             mode="w+",
-            shape=(num_simulations, traj_len, V, H, W),
+            shape=(num_traj, traj_len, V, H, W),
         )
 
         name_png_dir = self._define_png_dir()
@@ -71,14 +68,14 @@ class ImageProcessor:
             i, j, v_idx, path = args
             img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
 
-            if img is None:
-                raise RuntimeError(f"Image not found: {path}")
+            # if img is None:
+            #     raise RuntimeError(f"Image not found: {path}")
 
             img_resized = cv2.resize(img, (W, H), interpolation=cv2.INTER_AREA)
             return i, j, v_idx, img_resized
 
         paths = []
-        for i in range(num_simulations):
+        for i in range(num_traj):
             for j in range(traj_len):
                 for v_idx, v in enumerate(views):
                     if v is None:
@@ -111,13 +108,13 @@ class ImageProcessor:
 
         self.reorganise_dataset_mmap(
             im_path=im_path,
-            num_simulations=num_simulations,
+            num_simulations=num_traj,
             traj_len=traj_len,
             seq_len=num_steps_pred,
             resolution=im_size,
             save_dir=save_dir,
             num_views=V,
-            delay=self.params.delay,
+            delay=self.params["postprocessing"]["delay"],
         )
 
     def _define_save_dir(self) -> Path:
@@ -168,7 +165,7 @@ class ImageProcessor:
 
         print("Dataset reshape (memmap / par trajectoire)")
 
-        total_samples, num_seq, H, W = self._compute_shapes(
+        total_samples, num_seq, H, W, usable_samples_per_traj = self._compute_shapes(
             num_simulations=num_simulations,
             traj_len=traj_len,
             seq_len=seq_len,
@@ -200,6 +197,10 @@ class ImageProcessor:
             traj = im_dataset[i]
             windows = self._traj_to_windows(traj, delay)
 
+            # Keep only a multiple of seq_len inside each trajectory.
+            # This avoids mixing the end of one trajectory with the beginning of the next.
+            windows = windows[:usable_samples_per_traj]
+
             n_i = windows.shape[0]
             y_flat[pair_idx:pair_idx + n_i] = windows
             pair_idx += n_i
@@ -220,27 +221,38 @@ class ImageProcessor:
 
     @staticmethod
     def _compute_shapes(
-        num_simulations: int,
-        traj_len: int,
-        seq_len: int,
-        resolution: int,
-        delay: int,
-    ) -> tuple[int, int, int, int]:
-
+            num_simulations: int,
+            traj_len: int,
+            seq_len: int,
+            resolution: int,
+            delay: int,
+    ) -> tuple[int, int, int, int, int]:
         n_samples_per_traj = traj_len - delay
-        total_samples = num_simulations * n_samples_per_traj
 
-        if total_samples % seq_len != 0:
+        if n_samples_per_traj <= 0:
             raise ValueError(
-                f"total_samples must be divisible by seq_len, got "
-                f"total_samples={total_samples}, seq_len={seq_len}. "
-                f"Consider truncating the remainder."
+                f"Invalid temporal config: traj_len={traj_len}, delay={delay}. "
+                "Expected traj_len > delay."
             )
 
-        num_seq = total_samples // seq_len
+        if seq_len <= 0:
+            raise ValueError(f"seq_len must be positive, got {seq_len}.")
+
+        num_seq_per_traj = n_samples_per_traj // seq_len
+
+        if num_seq_per_traj == 0:
+            raise ValueError(
+                f"Cannot build one sequence: traj_len={traj_len}, "
+                f"delay={delay}, n_samples_per_traj={n_samples_per_traj}, "
+                f"seq_len={seq_len}."
+            )
+
+        usable_samples_per_traj = num_seq_per_traj * seq_len
+        total_samples = num_simulations * usable_samples_per_traj
+        num_seq = num_simulations * num_seq_per_traj
         H = W = resolution
 
-        return total_samples, num_seq, H, W
+        return total_samples, num_seq, H, W, usable_samples_per_traj
 
     @staticmethod
     def _traj_to_windows(traj: np.ndarray, delay: int) -> np.ndarray:

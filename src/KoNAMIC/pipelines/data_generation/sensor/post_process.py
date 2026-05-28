@@ -1,13 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from pathlib import Path
-from typing import Literal
-
 import numpy as np
-
-from .params import Dataset
-
 
 def moving_average_along_time(x: np.ndarray, window: int) -> np.ndarray:
     if window <= 1:
@@ -30,22 +23,3 @@ def moving_average_along_time(x: np.ndarray, window: int) -> np.ndarray:
             out[i, :, j] = np.convolve(x_pad[i, :, j], kernel, mode="valid")
 
     return out
-
-
-def post_process(dataset: Dataset, cfg: DataGenerationConfig) -> Dataset:
-    idx = np.arange(0, dataset.states.shape[1], cfg.ds_step)
-
-    if cfg.ds_step == 1:
-        return dataset
-
-    states = moving_average_along_time(dataset.states, cfg.smooth_window)[:, idx, :]
-    inputs = moving_average_along_time(dataset.inputs, cfg.smooth_window)[:, idx, :]
-    states_ref = moving_average_along_time(dataset.states_ref, cfg.smooth_window)[:, idx, :]
-    time = dataset.time[idx]
-
-    return Dataset(
-        states=states,
-        inputs=inputs,
-        states_ref=states_ref,
-        time=time,
-    )

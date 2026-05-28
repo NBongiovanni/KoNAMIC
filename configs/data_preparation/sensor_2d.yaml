@@ -1,0 +1,31 @@
+drone_dim: 2
+dataloader:
+  batch_size: 32
+  num_workers: 2
+
+postprocessing:
+  ds_step: 1
+  smooth_window: 1
+  delay: 0
+
+train:
+  num_steps_loaded: 251
+  num_steps_pred: 251
+
+val_datasets:
+  - split: "val_1"
+    name: "short_horizon"
+    num_steps_loaded: 251
+    num_steps_pred: 251
+
+  - split: "val_2"
+    name: "long_horizon"
+    num_steps_loaded: 251
+    num_steps_pred: 251
+
+scaler:
+  scale_x: true
+  scale_u: true
+  center: true
+  mean_x: [0, 0, 0, 0, 0, 0]
+  mean_u: [0.26487, 0]

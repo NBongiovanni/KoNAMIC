@@ -3,7 +3,7 @@ import argparse
 
 def build_dataset_generation_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generate a dataset from simulated drone trajectories and optional rendered vision data."
+        description="Generate a dataset from simulated drone trajectories and optional rendered vision data_generation."
     )
 
     parser.add_argument(
@@ -16,32 +16,16 @@ def build_dataset_generation_arg_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--drone-dim",
-        dest="drone_dim",
         type=int,
         help="Drone dimension, e.g. 2 for planar quadrotor.",
     )
 
     parser.add_argument(
-        "--dt",
-        type=float,
-        help="Sampling time used for dataset generation.",
-    )
-
-    parser.add_argument(
-        "--sensor-data-config",
-        dest="sensor_data_config",
+        "--data-config",
         type=str,
         required=True,
-        help="Path to the sensor data generation configuration file.",
     )
 
-    parser.add_argument(
-        "--vision-data-config",
-        dest="vision_data_config",
-        type=str,
-        required=False,
-        help="Path to the vision data generation configuration file.",
-    )
 
     parser.add_argument(
         "--dataset-stamp",

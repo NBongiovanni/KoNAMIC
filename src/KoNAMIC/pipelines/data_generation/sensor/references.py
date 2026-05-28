@@ -1,7 +1,7 @@
 import numpy as np
 
 from KoNAMIC.core.drone import DroneSpec
-from .params import SensorDatasetParams
+from .sensor_generation_config import SensorGenerationConfig
 from .profile import Profile
 
 
@@ -15,7 +15,7 @@ def rand_uniform_sym(rng: np.random.Generator, max_abs: float) -> float:
 
 def generate_reference(
     *,
-    cfg: SensorDatasetParams,
+    cfg: SensorGenerationConfig,
     time: np.ndarray,
     profile: Profile,
     x0: np.ndarray,
@@ -124,7 +124,7 @@ def build_controller_reference(
 
 def generate_reference_2d_user(
     *,
-    cfg: SensorDatasetParams,
+    cfg: SensorGenerationConfig,
     time: np.ndarray,
     profile: Profile,
     x0: np.ndarray,
@@ -204,7 +204,7 @@ def generate_reference_2d_user(
 
 def generate_reference_3d_user(
     *,
-    cfg: SensorDatasetParams,
+    cfg: SensorGenerationConfig,
     time: np.ndarray,
     profile: Profile,
     x0: np.ndarray,
@@ -291,7 +291,7 @@ def low_pass_filter_reference(
     *,
     ref: np.ndarray,
     x0_ref: np.ndarray,
-    cfg: SensorDatasetParams,
+    cfg: SensorGenerationConfig,
     rng: np.random.Generator,
 ) -> np.ndarray:
     """

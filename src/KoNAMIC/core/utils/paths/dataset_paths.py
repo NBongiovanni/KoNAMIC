@@ -28,11 +28,7 @@ class DatasetPaths:
         return self.root / "diagnostics"
 
 
-def build_dataset_paths(
-    *,
-    drone_dim: int,
-    dataset_stamp: str,
-) -> DatasetPaths:
+def build_dataset_paths(drone_dim: int, dataset_stamp: str) -> DatasetPaths:
     root = (
         get_datasets_root()
         / "datasets"

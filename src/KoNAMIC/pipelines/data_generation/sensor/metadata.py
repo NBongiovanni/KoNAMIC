@@ -1,13 +1,12 @@
 from dataclasses import asdict
 
-from .params import Dataset, SensorDatasetParams
+from KoNAMIC.core.drone import DroneSpec
+from .sensor_generation_config import SensorGenerationConfig
+from .dataset import Dataset
 
 
 def build_metadata(
-    dataset: Dataset,
-    cfg: SensorDatasetParams,
-    split: str,
-    drone,
+    dataset: Dataset, cfg: SensorGenerationConfig, split: str, drone: DroneSpec,
 ) -> dict:
 
     states_names = get_state_names(drone)
@@ -21,10 +20,7 @@ def build_metadata(
 
         "dt": cfg.dt,
         "t_sim": cfg.t_sim,
-        "n_trajs": cfg.num_traj,
         "n_steps": dataset.states.shape[1],
-        "downsample_step": cfg.ds_step,
-        "smooth_window": cfg.smooth_window,
 
         "states_shape": dataset.states.shape,
         "inputs_shape": dataset.inputs.shape,
@@ -55,31 +51,10 @@ def build_metadata(
 
 def get_state_names(drone) -> list[str]:
     if drone.drone_dim == 2:
-        return [
-            "y",
-            "z",
-            "theta",
-            "y_dot",
-            "z_dot",
-            "theta_dot",
-        ]
+        return ["y", "z", "theta", "y_dot", "z_dot", "theta_dot"]
 
     if drone.drone_dim == 3:
-        return [
-            "x",
-            "y",
-            "z",
-            "phi",
-            "theta",
-            "psi",
-            "x_dot",
-            "y_dot",
-            "z_dot",
-            "p",
-            "q",
-            "r",
-        ]
-
+        return ["x", "y", "z", "phi", "theta", "psi", "x_dot", "y_dot", "z_dot", "p", "q", "r"]
     raise ValueError(f"Unsupported drone_dim: {drone.drone_dim}")
 
 

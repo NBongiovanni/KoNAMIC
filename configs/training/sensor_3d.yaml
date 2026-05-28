@@ -9,7 +9,7 @@ model_params:
   dt: 0.01
   auto_encoder:
     include_state_in_z: false
-    dim_hidden_layers: [128, 128]
+    hidden_dims: [128, 128]
     num_hidden_layers: 2
     activation: "tanh"
 

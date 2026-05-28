@@ -1,30 +1,34 @@
 import joblib
 
-from .processor import Processor
-from .loader import Loader
+from .sensor_processor import SensorProcessor
+from .loader import SensorLoader, SensorLoadSpec
 
-class Builder:
-    def __init__(self, dataset_paths, params: dict, drone_dim: int):
-        self.loader = Loader(
-            dataset_paths,
-            drone_dim,
-            params["train"],
-            params["val_datasets"][0],
-            params["val_datasets"][1],
-            params["downsample_factor"],
-            True,
-            )
+class SensorBuilder:
+    def __init__(self, dataset_paths, params, drone_dim: int):
+
+        split_specs = {
+            "train": SensorLoadSpec(num_steps_loaded=None),
+            "val_1": SensorLoadSpec(num_steps_loaded=None),
+            "val_2": SensorLoadSpec(num_steps_loaded=None),
+        }
+
+        self.loader = SensorLoader(
+            dataset_paths=dataset_paths,
+            drone_dim=drone_dim,
+            split_specs=split_specs,
+            downsample_factor=1,
+        )
         raw_data = self.loader.load_raw_sensor_data()
-        batch_size = params["batch_size"]
+        batch_size = params["dataloader"]["batch_size"]
 
-        self.processor = Processor(
+        self.processor = SensorProcessor(
             batch_size,
             params["train"],
             params["val_datasets"][0],
             params["val_datasets"][1],
             raw_data,
             params["scaler"],
-            params["delay"],
+            params["postprocessing"]["delay"],
         )
         self.processor.generate_u_scaler()
         self.processor.generate_x_scaler()

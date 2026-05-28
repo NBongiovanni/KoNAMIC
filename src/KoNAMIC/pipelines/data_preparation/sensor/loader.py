@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -6,31 +9,28 @@ import numpy as np
 from KoNAMIC.core.utils import is_jean_zay_env, DatasetPaths
 
 
-class Loader:
+@dataclass
+class SensorLoadSpec:
+    num_steps_loaded: int | None = None
+
+
+class SensorLoader:
     def __init__(
         self,
+        *,
         dataset_paths: DatasetPaths,
         drone_dim: int,
-        train_dataset_specs: dict,
-        val_1_dataset_specs: dict,
-        val_2_dataset_specs: dict,
-        downsample_factor: int,
+        split_specs: dict[str, SensorLoadSpec],
+        downsample_factor: int = 1,
         verbose: bool = True,
     ):
-        super().__init__()
-
+        self.dataset_paths = dataset_paths
         self.drone_dim = drone_dim
-
-        self.train_dataset_specs = train_dataset_specs
-        self.val_1_dataset_specs = val_1_dataset_specs
-        self.val_2_dataset_specs = val_2_dataset_specs
-
+        self.split_specs = split_specs
         self.downsample_factor = downsample_factor
         self.verbose = verbose
 
         self.jean_zay = is_jean_zay_env()
-
-        self.dataset_paths = dataset_paths
         self.dataset_root = self.dataset_paths.root
         self.sensor_dir = self.dataset_paths.sensor_dir
 
@@ -40,27 +40,20 @@ class Loader:
             print("[DEBUG] dataset_root =", self.dataset_root)
             print("[DEBUG] sensor_dir =", self.sensor_dir)
 
-    def load_raw_sensor_data(self) -> dict:
+    def load_raw_sensor_data(self) -> dict[str, dict]:
         return {
-            "train": self._load_split(
-                split_name="train",
-                num_steps_loaded=self.train_dataset_specs["num_steps_loaded"],
-            ),
-            "val_1": self._load_split(
-                split_name="val_1",
-                num_steps_loaded=self.val_1_dataset_specs["num_steps_loaded"],
-            ),
-            "val_2": self._load_split(
-                split_name="val_2",
-                num_steps_loaded=self.val_2_dataset_specs["num_steps_loaded"],
-            ),
+            split_name: self._load_split(
+                split_name=split_name,
+                num_steps_loaded=split_spec.num_steps_loaded,
+            )
+            for split_name, split_spec in self.split_specs.items()
         }
 
     def _load_split(
         self,
         *,
         split_name: str,
-        num_steps_loaded: int,
+        num_steps_loaded: int | None,
     ) -> dict:
         npz_path = self._find_split_file(split_name)
 
@@ -74,17 +67,6 @@ class Loader:
         )
 
     def _find_split_file(self, split_name: str) -> Path:
-        """
-        Prefer the new format:
-            sensor/train.npz
-            sensor/val_1.npz
-            sensor/val_2.npz
-
-        Still accepts legacy names:
-            sensor/train_dataset.npz
-            sensor/val_1_dataset.npz
-            sensor/val_2_dataset.npz
-        """
         candidates = [
             self.dataset_paths.sensor_split(split_name),
             self.sensor_dir / f"{split_name}_dataset.npz",
@@ -103,7 +85,7 @@ class Loader:
     def _load_single_npz_dataset(
         *,
         npz_path: Path,
-        num_steps_loaded: int,
+        num_steps_loaded: int | None = None,
         downsample_factor: int = 1,
     ) -> dict:
         if not npz_path.exists():
@@ -143,10 +125,11 @@ class Loader:
         if x.shape[0] != x_ref.shape[0]:
             raise ValueError(f"N_traj mismatch: states {x.shape}, statesRef {x_ref.shape}")
 
-        x = x[:, :num_steps_loaded, :]
-        u = u[:, :num_steps_loaded, :]
-        x_ref = x_ref[:, :num_steps_loaded, :]
-        time = time[:num_steps_loaded]
+        if num_steps_loaded is not None:
+            x = x[:, :num_steps_loaded, :]
+            u = u[:, :num_steps_loaded, :]
+            x_ref = x_ref[:, :num_steps_loaded, :]
+            time = time[:num_steps_loaded]
 
         if downsample_factor > 1:
             x = x[:, ::downsample_factor, :]

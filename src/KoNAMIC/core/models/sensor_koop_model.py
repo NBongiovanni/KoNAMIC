@@ -21,7 +21,7 @@ class SensorKoopModel(BaseKoopModel):
             self.encoder = build_state_inclusive_mlp(
                 dim_in=self.x_dim,
                 latent_extra_dim=self.z_dim - self.x_dim,
-                hidden_dims=model_params["auto_encoder"]["dim_hidden_layers"],
+                hidden_dims=model_params["auto_encoder"]["hidden_dims"],
                 act=self.activation,
             )
             self.decoder = StateSliceDecoder(self.x_dim)
@@ -29,13 +29,13 @@ class SensorKoopModel(BaseKoopModel):
             self.encoder = build_mlp(
                 self.x_dim,
                 self.z_dim,
-                model_params["auto_encoder"]["dim_hidden_layers"],
+                model_params["auto_encoder"]["hidden_dims"],
                 self.activation,
             )
             self.decoder = build_mlp(
                 self.z_dim,
                 self.x_dim,
-                model_params["auto_encoder"]["dim_hidden_layers"],
+                model_params["auto_encoder"]["hidden_dims"],
                 self.activation,
             )
 

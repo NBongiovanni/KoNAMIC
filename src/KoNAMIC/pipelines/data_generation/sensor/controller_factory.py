@@ -6,7 +6,6 @@ from KoNAMIC.core.control.controllers import (
     PIDPosAttController,
     PIDPlanarPosAttController,
 )
-from KoNAMIC.pipelines.data_generation.sensor import SensorDatasetParams
 
 
 def as_array(value) -> np.ndarray:
@@ -19,38 +18,27 @@ def as_float(value) -> float:
     """
     return float(np.asarray(value, dtype=float).reshape(-1)[0])
 
-def build_controller_factory(
-    *,
-    drone: DroneSpec,
-    cfg: SensorDatasetParams,
-    ctrl_cfg: dict,
-) -> Callable:
+
+def build_controller_factory(drone: DroneSpec, ctrl_cfg: dict) -> Callable:
     if drone.drone_dim == 2:
-        return build_planar_controller_factory(
+        return build_2d_controller_factory(
             drone=drone,
-            cfg=cfg,
             ctrl_cfg=ctrl_cfg,
         )
 
     if drone.drone_dim == 3:
         return build_3d_controller_factory(
             drone=drone,
-            cfg=cfg,
             ctrl_cfg=ctrl_cfg,
         )
 
     raise ValueError(f"Unsupported drone_dim: {drone.drone_dim}")
 
 
-def build_3d_controller_factory(
-    *,
-    drone: DroneSpec,
-    cfg: SensorDatasetParams,
-    ctrl_cfg: dict,
-) -> Callable:
+def build_3d_controller_factory(drone: DroneSpec, ctrl_cfg: dict) -> Callable:
     def controller_factory():
         return PIDPosAttController(
-            dt=cfg.dt,
+            dt=ctrl_cfg["dt"],
             x_dim=drone.x_dim,
             u_dim=drone.u_dim,
             mass=drone.mass,
@@ -75,15 +63,10 @@ def build_3d_controller_factory(
     return controller_factory
 
 
-def build_planar_controller_factory(
-    *,
-    drone: DroneSpec,
-    cfg: SensorDatasetParams,
-    ctrl_cfg: dict,
-) -> Callable:
+def build_2d_controller_factory(drone: DroneSpec, ctrl_cfg: dict) -> Callable:
     def controller_factory():
         return PIDPlanarPosAttController(
-            dt=cfg.dt,
+            dt=ctrl_cfg["dt"],
             x_dim=drone.x_dim,
             u_dim=drone.u_dim,
             mass=drone.mass,

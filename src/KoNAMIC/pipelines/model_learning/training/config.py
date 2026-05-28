@@ -48,7 +48,7 @@ class TrainingConfig:
 
         training_config_path = root / "configs" / "training" / f"{name}.yaml"
         control_config_path = root / "configs" / "control" / f"knmpc_{modality}_{drone_dim}d_base.yaml"
-        dataset_config_path = root / "configs" / "data" / f"{modality}_{drone_dim}d.yaml"
+        dataset_config_path = root / "configs" / "data_preparation" / f"{modality}_{drone_dim}d.yaml"
 
         params = utils.load_yaml(training_config_path)
         control_params = utils.load_yaml(control_config_path)
@@ -74,7 +74,7 @@ class TrainingConfig:
         self.model_params["z_dynamics"]["x_dim"] = x_dim
         self.model_params["z_dynamics"]["u_dim"] = u_dim
 
-        self.model_params["auto_encoder"]["delay"] = self.dataset_params["delay"]
+        self.model_params["auto_encoder"]["delay"] = self.dataset_params["postprocessing"]["delay"]
         self.control_params["dt"] = self.model_params["dt"]
 
     def apply_cli_options(self, args: Namespace) -> None:

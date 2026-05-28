@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .params import Dataset
+from .dataset import Dataset
 
 def save_dataset_npz(dataset: Dataset, metadata: dict, final_path: Path) -> None:
     final_path.parent.mkdir(parents=True, exist_ok=True)

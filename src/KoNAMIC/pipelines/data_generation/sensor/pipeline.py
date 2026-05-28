@@ -4,24 +4,25 @@ from pathlib import Path
 import numpy as np
 
 from KoNAMIC.core.drone import DroneSpec
+from KoNAMIC.core.plants import Plant
 from KoNAMIC.viz import plot_dataset_diagnostics
 
-from .params import SensorDatasetParams, Dataset
+from .sensor_generation_config import SensorGenerationConfig
+from .dataset import Dataset
 from .profile import get_profile
 from .initial_conditions import sample_initial_condition
 from .references import generate_reference
 from .simulation import simulate_trajectory
-from .post_process import post_process
 from .metadata import build_metadata
 
 
 def generate_dataset(
-    *,
-    cfg: SensorDatasetParams,
-    drone,
-    plant,
+    cfg: SensorGenerationConfig,
+    drone: DroneSpec,
+    plant: Plant,
     controller_factory,
     split: str,
+    num_traj: int,
 ) -> tuple[Dataset, dict]:
 
     rng = np.random.default_rng(cfg.seed)
@@ -29,16 +30,18 @@ def generate_dataset(
     time = np.arange(0.0, cfg.t_sim + cfg.dt / 2.0, cfg.dt)
     n_steps = len(time)
 
-    states = np.zeros((cfg.num_traj, n_steps, drone.x_dim), dtype=float)
-    inputs = np.zeros((cfg.num_traj, n_steps, drone.u_dim), dtype=float)
+    states = np.zeros((num_traj, n_steps, drone.x_dim), dtype=float)
+    inputs = np.zeros((num_traj, n_steps, drone.u_dim), dtype=float)
+    states_ref = np.zeros((num_traj, n_steps, drone.x_dim), dtype=float)
 
-    states_ref = np.zeros((cfg.num_traj, n_steps, drone.x_dim), dtype=float)
-
-    for i in range(cfg.num_traj):
+    for i in range(num_traj):
         print(i)
-
-        profile = get_profile(cfg, i, drone)
-
+        profile = get_profile(
+            cfg=cfg,
+            traj_idx=i,
+            num_traj=num_traj,
+            drone=drone,
+        )
         x0 = sample_initial_condition(
             cfg=cfg,
             profile=profile,
@@ -94,15 +97,13 @@ def generate_dataset(
         inputs[i] = result.inputs
         states_ref[i] = result.states_ref
 
-    raw_dataset = Dataset(
+    dataset = Dataset(
         states=states,
         inputs=inputs,
         states_ref=states_ref,
         time=time,
     )
-
-    dataset = post_process(raw_dataset, cfg)
-    metadata = build_metadata(dataset, cfg, split, drone=drone)
+    metadata = build_metadata(dataset, cfg, split, drone)
     return dataset, metadata
 
 
@@ -144,18 +145,16 @@ def build_controller_reference(
 
 def generate_all_splits(
     *,
-    cfg: SensorDatasetParams,
+    cfg: SensorGenerationConfig,
     drone: DroneSpec,
     plant,
     controller_factory,
     output_path: Path,
     plot_debug: bool = False,
 ) -> None:
-
-    for split_idx, (split_name, num_traj) in enumerate(cfg.split_lengths.items()):
+    for split_idx, (split_name, split_info) in enumerate(cfg.splits.items()):
         split_cfg = replace(
             cfg,
-            num_traj=num_traj,
             seed=cfg.seed + split_idx,
         )
 
@@ -165,6 +164,7 @@ def generate_all_splits(
             plant=plant,
             controller_factory=controller_factory,
             split=split_name,
+            num_traj=split_info.num_traj,
         )
 
         save_dataset_npz(
@@ -185,7 +185,7 @@ def generate_all_splits(
 
 
 def save_dataset_npz(dataset: Dataset, metadata: dict, final_path: Path) -> None:
-    #TODO: move this
+    # TODO: move this
     final_path.parent.mkdir(parents=True, exist_ok=True)
     print(final_path)
 
