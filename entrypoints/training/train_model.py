@@ -7,7 +7,7 @@ matplotlib.use("Agg")
 from KoNAMIC.core import utils
 from KoNAMIC.core.drone import build_drone
 from KoNAMIC.core.models import init_model
-from KoNAMIC.pipelines.data_preparation import VisionBuilder, SensorBuilder
+from KoNAMIC.pipelines.data_preparation import VisionBuilder, SensorBuilder, prepare_vision_memmap
 from KoNAMIC.pipelines.model_learning import Trainer, TrainingConfig, parse_learning_args
 
 
@@ -60,13 +60,19 @@ def main() -> None:
     joblib.dump(x_scaler, run_paths.run_dir / "x_scaler.pkl")
 
     if args.modality == "vision":
+        prepare_vision_memmap(
+            num_traj=dataset_params["train"]["num_traj_loaded"],
+            dataset_params=dataset_params,
+            dataset_stamp=args.dataset_stamp,
+        )
+
         im_dataset_builder = VisionBuilder(
             dataset_paths,
             len(dataset_params["val_datasets"]),
             dataset_params["resolution"],
-            dataset_params["batch_size"],
+            dataset_params["dataloader"]["batch_size"],
             processed_states_inputs,
-            dataset_params["num_workers"],
+            dataset_params["dataloader"]["num_workers"],
             drone,
             args.drone_dim,
             args.seed,
