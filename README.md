@@ -21,35 +21,28 @@ In particular:
 
 The codebase is organized around the following main workflows.
 
-| Workflow | Entry point | Purpose                                                                             |
-|---|---|-------------------------------------------------------------------------------------|
-| Sensor dataset generation | `entrypoints/dataset/generate_sensor_dataset.py` | Generate sensor-based trajectories and save them as `.npz` datasets.                |
-| Vision dataset generation | `entrypoints/dataset/generate_vision_dataset.py` | Render and preprocess image datasets from previously generated sensor trajectories. |
-| Model training | `entrypoints/training/train_model.py` | Train a Koopman-inspired model from sensor or visual data.                          |
-| Open-loop evaluation | `entrypoints/open_loop/run.py` | Evaluate a trained model by rolling it out without feedback control.                |
-| Open-loop comparison | `entrypoints/open_loop/compare.py` | Overlay rollouts from several trained models using a YAML preset.                   |
-| Closed-loop simulation | `entrypoints/closed_loop/run.py` | Run closed-loop simulations with Koopman MPC or baseline controllers.               |
-| Closed-loop comparison | `entrypoints/closed_loop/compare.py` | Compare several closed-loop runs using a YAML preset.                               |
+| Workflow | Entry point                                              | Purpose                                                                             |
+|---|----------------------------------------------------------|-------------------------------------------------------------------------------------|
+| Sensor dataset generation | `entrypoints/data_generation/generate_sensor_dataset.py` | Generate sensor-based trajectories and save them as `.npz` datasets.                |
+| Vision dataset generation | `entrypoints/data_generation/generate_vision_dataset.py` | Render and preprocess image datasets from previously generated sensor trajectories. |
+| Model training | `entrypoints/train_model.py`                    | Train a Koopman-inspired model from sensor or visual data.                          |
+| Open-loop evaluation | `entrypoints/open_loop/run.py`                           | Evaluate a trained model by rolling it out without feedback control.                |
+| Open-loop comparison | `entrypoints/open_loop/compare.py`                       | Overlay rollouts from several trained models using a YAML preset.                   |
+| Closed-loop simulation | `entrypoints/closed_loop/run.py`                         | Run closed-loop simulations with Koopman MPC or baseline controllers.               |
+| Closed-loop comparison | `entrypoints/closed_loop/compare.py`                     | Compare several closed-loop runs using a YAML preset.                               |
 
 ## Installation
 
-Clone the repository and install it from the project root:
-
+Clone the repository and create a Python environment:
 ```bash
 git clone https://github.com/NBongiovanni/KoNAMIC.git
 cd KoNAMIC
 python -m venv .venv
 source .venv/bin/activate
+pip install -r requirements.txt
 pip install -e .
 ```
-
-If a `requirements.txt` or environment file is provided, install it before running the examples:
-
-```bash
-pip install -r requirements.txt
-```
-
-Closed-loop MPC experiments may require additional dependencies such as `acados` and its Python interface.
+> Note: depending on your system and CUDA version, you may prefer to install PyTorch separately following the official PyTorch instructions before installing the remaining dependencies.
 
 ## Dataset generation
 
@@ -60,8 +53,8 @@ Datasets are generated in two steps. First, sensor trajectories are simulated an
 Sensor datasets of a quadrotor (2d or 3d) can be generated with:
 
 ```bash
-python entrypoints/dataset/generate_sensor_dataset.py \
-  --sensor_data_config configs/data/sensor_2d.yaml \
+python entrypoints/data_generation/generate_sensor_dataset.py \
+  --sensor_data_config configs/data_generation/sensor_2d.yaml \
   --modality sensor \
   --drone-dim 2
 ```
@@ -73,11 +66,11 @@ The script loads the sensor dataset configuration, builds the corresponding dron
 Vision datasets of a quadrotor are generated from an existing sensor dataset:
 
 ```bash
-python entrypoints/dataset/generate_vision_dataset.py \
-  --vision_data_config configs/data/vision_2d.yaml \
+python entrypoints/data_generation/generate_vision_dataset.py \
+  --vision_data_config configs/data_generation/vision_2d.yaml \
   --modality vision \
   --drone-dim 2 \
-  --dataset-stamp <sensor_dataset_stamp>
+  --data_generation-stamp <sensor_dataset_stamp>
 ```
 
 The vision pipeline loads the previously generated sensor trajectories, renders raw images, and preprocesses them into memory-mapped arrays for training. The generated files are stored in the dataset directory associated with `--dataset-stamp`.
@@ -118,7 +111,7 @@ python entrypoints/training/train_model.py \
   --config vision_2d \
   --id <run_id> \
   --seed 0 \
-  --dataset-stamp <vision_dataset_stamp>
+  --data_generation-stamp <vision_dataset_stamp>
 ```
 
 The selected `--modality` determines how the training data are prepared internally. With `sensor`, the entry point loads the state/input dataset directly. With `vision`, it loads the corresponding preprocessed image dataset together with the associated state/input scalers.
@@ -178,6 +171,7 @@ or with a custom preset file:
 python entrypoints/open_loop/compare.py \
   --preset-file configs/figures/open_loop.yaml \
   --preset <preset_name>
+  --dt <dt>
 ```
 
 ## Closed-loop simulation
@@ -213,6 +207,7 @@ or:
 python entrypoints/closed_loop/compare.py \
   --preset-file configs/figures/control.yaml \
   --preset <preset_name>
+  --dt <dt>
 ```
 
 ## Configuration files

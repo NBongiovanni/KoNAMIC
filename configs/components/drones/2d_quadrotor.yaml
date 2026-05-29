@@ -1,0 +1,6 @@
+name: "2d_quadrotor"
+drone_dim: 2
+mass: 0.028
+gravity: 9.81
+arm_length: 0.046
+inertia: [16.6e-6, 16.6e-6, 29.3e-6]

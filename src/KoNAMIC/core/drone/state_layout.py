@@ -13,6 +13,7 @@ def get_angle_indexes(drone_dim: int) -> List:
         raise ValueError(f"Drone dimension {drone_dim} not supported.")
     return angle_indexes
 
+
 def convert_rad_to_deg_np(x, idxs: list[int]) -> np.ndarray:
     x = np.asarray(x).copy()
     x[..., idxs] *= (180.0 / np.pi)

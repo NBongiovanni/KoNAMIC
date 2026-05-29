@@ -1,6 +1,5 @@
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib as mpl
 
 from KoNAMIC.core import utils
 from KoNAMIC.pipelines.open_loop_simulation import (
@@ -13,7 +12,7 @@ from KoNAMIC.pipelines.open_loop_simulation import (
     load_open_loop_overlay_preset,
 )
 
-mpl.rcParams.update({
+matplotlib.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
     "font.serif": ["Computer Modern Roman"],
@@ -83,11 +82,11 @@ def main() -> None:
 
         visualizer = OpenLoopMultiVisualizer(
             task=cfg.task,
+            dt=args.dt,
             drone_dim=drone_dim,
             only_position=False,
             plot_dir=traj_out_dir,
             names=names,
-            dt=cfg.dt,
             num_columns_states=2,
             num_columns_inputs=2,
             colors=colors,

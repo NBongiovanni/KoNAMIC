@@ -20,7 +20,6 @@ class PIDPosAttController(BaseController):
         x_ref = [x_ref, y_ref, z_ref, psi_ref, ...]
     Seules les composantes x, y, z, psi sont utilisées ici.
     """
-
     def __init__(
         self,
         dt: float,
@@ -79,7 +78,6 @@ class PIDPosAttController(BaseController):
 
         self.moment_max = moment_max
         self.moment_min = (-1)*moment_max
-
 
         self.x_ref_traj: Optional[np.ndarray] = None
         self.step_idx: int = 0
@@ -239,7 +237,13 @@ class PIDPosAttController(BaseController):
         acc_z = self.kp_att[2] * e_att[2] + self.kd_att[2] * d_att[2]
 
         acc_cmd = np.array([acc_x, acc_y, acc_z], dtype=float)
-        acc_cmd = np.clip(acc_cmd, self.moment_min/self.inertia[0], self.moment_max/self.inertia[0])
+        acc_cmd = np.clip(
+            acc_cmd,
+            self.moment_min / self.inertia,
+            self.moment_max / self.inertia,
+        )
+
+        # acc_cmd = np.clip(acc_cmd, self.moment_min/self.inertia[0], self.moment_max/self.inertia[0])
 
         # limitation de vitesse de variation
         dacc_cmd = acc_cmd - self.prev_acc_cmd
@@ -273,16 +277,6 @@ class PIDPosAttController(BaseController):
             },
         )
 
-    def _extract_state_from_observation(self, observation: Any) -> np.ndarray:
-        if isinstance(observation, dict):
-            if "x_k" not in observation:
-                raise KeyError("Observation dict must contain key 'x_k'.")
-            x_k = observation["x_k"]
-        else:
-            x_k = observation
-
-        return np.asarray(x_k, dtype=float).reshape(-1)
-
     def _filtered_derivative(self, e: float, x_d: float) -> tuple[float, float]:
         # même idée que dans ton MATLAB :
         # x_d_new = x_d + Ts * N * (e - x_d)
@@ -294,3 +288,14 @@ class PIDPosAttController(BaseController):
     @staticmethod
     def _angle_error(angle_ref: float, angle: float) -> float:
         return float(np.arctan2(np.sin(angle_ref - angle), np.cos(angle_ref - angle)))
+
+    @staticmethod
+    def _extract_state_from_observation(observation: Any) -> np.ndarray:
+        if isinstance(observation, dict):
+            if "x_k" not in observation:
+                raise KeyError("Observation dict must contain key 'x_k'.")
+            x_k = observation["x_k"]
+        else:
+            x_k = observation
+
+        return np.asarray(x_k, dtype=float).reshape(-1)

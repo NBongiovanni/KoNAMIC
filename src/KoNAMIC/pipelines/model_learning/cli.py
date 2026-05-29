@@ -2,10 +2,9 @@ import argparse
 
 
 def build_learning_arg_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Train/Resume Koopman model (sensors)")
+    p = argparse.ArgumentParser(description="Train Koopman model")
     p.add_argument("--modality", type=str)
     p.add_argument("--id", type=str)
-    p.add_argument("--config", type=str)
     p.add_argument("--drone_dim", type=int)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--dynamics", type=str)

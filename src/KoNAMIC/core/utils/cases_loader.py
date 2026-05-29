@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 import yaml
 
@@ -11,15 +11,11 @@ from .paths.path_utils import find_project_root
 
 @dataclass(frozen=True)
 class CaseConfig:
-    stamp: str
+    model_stamp: str
     epoch: int
     run_status: str
-    include_state_in_z: bool
-    geom_losses: bool
     drone_dim: int
-    dynamics: str
-    best_open_loop_simulations: dict
-    best_closed_loop_simulations: dict
+    best_simulations: dict[str, dict[str, str]]
 
 
 _CASES_FILENAMES: Final[dict[str, str]] = {
@@ -30,7 +26,8 @@ _CASES_FILENAMES: Final[dict[str, str]] = {
 
 def _get_cases_file(modality: str) -> Path:
     """
-    Retourne le chemin absolu du fichier YAML correspondant à la modalité.
+    Return the absolute path of the model registry YAML file
+    associated with a modality.
     """
     try:
         filename = _CASES_FILENAMES[modality]
@@ -41,58 +38,100 @@ def _get_cases_file(modality: str) -> Path:
         ) from exc
 
     project_root = find_project_root()
-    return project_root / "configs" / "model_registry" /filename
+    return (
+        project_root
+        / "configs"
+        / "registries"
+        / "models"
+        / filename
+    )
+
+
+def _parse_case_config(case_id: str, case_dict: Any, path: Path) -> CaseConfig:
+    """
+    Parse and validate one model registry entry.
+    """
+    if not isinstance(case_dict, dict):
+        raise TypeError(
+            f"Invalid case {case_id!r} in {path}: expected a mapping, "
+            f"got {type(case_dict).__name__}."
+        )
+
+    required_keys = {
+        "model_stamp",
+        "epoch",
+        "run_status",
+        "drone_dim",
+        "best_simulations",
+    }
+
+    missing_keys = required_keys - case_dict.keys()
+    if missing_keys:
+        raise KeyError(
+            f"Invalid case {case_id!r} in {path}: missing required key(s) "
+            f"{sorted(missing_keys)}."
+        )
+
+    best_simulations = case_dict["best_simulations"]
+    if not isinstance(best_simulations, dict):
+        raise TypeError(
+            f"Invalid case {case_id!r} in {path}: 'best_simulations' "
+            f"must be a mapping."
+        )
+
+    drone_dim = int(case_dict["drone_dim"])
+    if drone_dim not in (1, 2, 3):
+        raise ValueError(
+            f"Invalid case {case_id!r} in {path}: "
+            f"'drone_dim' must be 1, 2, or 3, got {drone_dim}."
+        )
+
+    return CaseConfig(
+        model_stamp=str(case_dict["model_stamp"]),
+        epoch=int(case_dict["epoch"]),
+        run_status=str(case_dict["run_status"]),
+        drone_dim=drone_dim,
+        best_simulations=best_simulations,
+    )
 
 
 def load_cases(modality: str) -> dict[int, CaseConfig]:
     """
-    Charge les cas de contrôle définis dans le YAML associé à la modalité.
+    Load the model registry associated with a modality.
 
     Parameters
     ----------
     modality:
-        Modalité du modèle. Valeurs attendues : "vision" ou "sensor".
+        Model modality. Expected values: "vision" or "sensor".
 
     Returns
     -------
     dict[int, CaseConfig]
-        Dictionnaire indexé par identifiant de cas.
-
-    Raises
-    ------
-    ValueError
-        Si la modalité est inconnue.
-    FileNotFoundError
-        Si le fichier YAML n'existe pas.
-    KeyError
-        Si la clé 'model_registry' est absente du YAML.
-    TypeError
-        Si un cas ne correspond pas à la structure attendue.
+        Dictionary indexed by case identifier.
     """
     path = _get_cases_file(modality)
 
     if not path.exists():
-        raise FileNotFoundError(f"Cases config file not found: {path}")
+        raise FileNotFoundError(f"Model registry file not found: {path}")
 
     with path.open("r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     if not isinstance(data, dict):
-        raise TypeError(f"Invalid YAML structure in {path}: expected a mapping at root.")
+        raise TypeError(
+            f"Invalid YAML structure in {path}: expected a mapping at root."
+        )
 
     if "model_registry" not in data:
         raise KeyError(f"Missing top-level key 'model_registry' in {path}")
 
     raw_cases = data["model_registry"]
     if not isinstance(raw_cases, dict):
-        raise TypeError(f"Invalid 'model_registry' section in {path}: expected a mapping.")
-
-    try:
-        return {
-            int(case_id): CaseConfig(**case_dict)
-            for case_id, case_dict in raw_cases.items()
-        }
-    except TypeError as exc:
         raise TypeError(
-            f"Invalid case entry in {path}. A case does not match CaseConfig."
-        ) from exc
+            f"Invalid 'model_registry' section in {path}: expected a mapping."
+        )
+
+    return {
+        int(case_id): _parse_case_config(case_id, case_dict, path)
+        for case_id, case_dict in raw_cases.items()
+    }

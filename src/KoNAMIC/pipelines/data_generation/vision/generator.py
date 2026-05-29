@@ -32,7 +32,7 @@ class VisionDatasetRenderer:
             raise ValueError(f"Unknown drone dimension: {params.drone_dim}")
 
     def generate_raw_images(self) -> None:
-        print(self.phase + " dataset: raw image generation started")
+        print(self.phase + " data_generation: raw image generation started")
         q = self.num_traj // 4
         intervals = [
             (0,    q),
@@ -54,7 +54,7 @@ class VisionDatasetRenderer:
         # On attend que tous les processus soient terminés
         for p in processes:
             p.join()
-        print(f"[{self.phase}] dataset: raw image generation terminé.")
+        print(f"[{self.phase}] data_generation: raw image generation terminé.")
 
     def _generate_raw_images_chunk(
             self,

@@ -1,0 +1,52 @@
+model_registry:
+  "5":
+    model_stamp: "bilin_4_2026-02-12_15-49-39"
+    epoch: 1000
+    run_status: "final"
+    drone_dim: 3
+    best_simulations:
+      open_loop:
+        setpoint_tracking: "2026-02-19_17-56-26"
+        trajectory_tracking: "2026-02-18_13-43-32"
+      closed_loop:
+        setpoint_tracking: "2026-02-20_13-19-22"
+        trajectory_tracking: "2026-04-09_09-23-28"
+
+  "6":
+    model_stamp: "lin_3_2026-02-12_12-14-44"
+    epoch: 1000
+    run_status: "final"
+    drone_dim: 3
+    best_simulations:
+      open_loop:
+        setpoint_tracking: "2026-02-19_17-55-33"
+        trajectory_tracking: "2026-02-18_13-43-32"
+      closed_loop:
+        setpoint_tracking: "2026-02-20_13-19-47"
+        trajectory_tracking: "2026-04-09_09-27-54"
+
+  "9":
+    model_stamp: "bilin_5_2026-04-04_17-54-15"
+    epoch: 600
+    run_status: "final"
+    drone_dim: 3
+    best_simulations:
+      open_loop:
+        setpoint_tracking: "2026-04-04_19-41-23"
+        trajectory_tracking: "..."
+      closed_loop:
+        setpoint_tracking: "..."
+        trajectory_tracking: "..."
+
+  "10":
+    model_stamp: "bilin_2_2026-04-04_17-30-23"
+    epoch: 1000
+    run_status: "final"
+    drone_dim: 3
+    best_simulations:
+      open_loop:
+        setpoint_tracking: "2026-04-04_19-42-25"
+        trajectory_tracking: "..."
+      closed_loop:
+        setpoint_tracking: "..."
+        trajectory_tracking: "..."

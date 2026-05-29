@@ -3,7 +3,8 @@ import argparse
 
 def build_dataset_generation_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generate a dataset from simulated drone trajectories and optional rendered vision data_generation."
+        description="Generate a data_generation from simulated drone trajectories "
+                    "and optional rendered vision data_generation."
     )
 
     parser.add_argument(
@@ -20,15 +21,9 @@ def build_dataset_generation_arg_parser() -> argparse.ArgumentParser:
         help="Drone dimension, e.g. 2 for planar quadrotor.",
     )
 
-    parser.add_argument(
-        "--data-config",
-        type=str,
-        required=True,
-    )
-
 
     parser.add_argument(
-        "--dataset-stamp",
+        "--data_generation-stamp",
         type=str,
         required=False,
         help="Dataset version name. If omitted, a timestamp may be used.",

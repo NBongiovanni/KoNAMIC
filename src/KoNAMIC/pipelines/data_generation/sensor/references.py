@@ -228,7 +228,10 @@ def generate_reference_3d_user(
 
     n_segments = int(rng.integers(3, 7))
 
-    if profile == "step_z":
+    if profile == "hover":
+        pass
+
+    elif profile == "step_z":
         ref[:, 2] = build_multistep_signal(
             n_samples=n_steps,
             n_segments=n_segments,

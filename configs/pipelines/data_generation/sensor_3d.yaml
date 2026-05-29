@@ -1,15 +1,17 @@
 seed: 1
 
 simulation:
-  dt: 0.01
-  t_sim: 3.1
+  dt: 0.001
+  t_sim: 3.0
 
 trajectory_generation:
   reference_bounds:
+    x_max: 0.5
     y_max: 0.5
     z_max: 0.5
 
   initial_state_bounds:
+    x_max: 0.5
     y_max: 0.5
     z_max: 0.5
     angle_max: 0.0
@@ -22,13 +24,10 @@ trajectory_generation:
     only_aggressive: false
     init_angles_to_zero: false
 
-controller:
-  config_path: "configs/control/pid_sensor_2d_base.yaml"
-
 splits:
   train:
-    num_traj: 50
+    num_traj: 10
   val_1:
-    num_traj: 50
+    num_traj: 10
   val_2:
-    num_traj: 50
+    num_traj: 10

@@ -122,7 +122,7 @@ class VisionProcessor:
 
     def _define_png_dir(self) -> Path:
         """
-        Raw images associated with the same dataset root.
+        Raw images associated with the same data_generation root.
 
         Recommended layout:
             datasets/{drone_dim}d/{dataset_version}/raw_images/{phase}/...

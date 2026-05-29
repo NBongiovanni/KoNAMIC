@@ -1,0 +1,16 @@
+closed_loop_every: 1
+num_epochs: 1400
+checkpoint_every: 10
+loss_weights: { pred_x: 10, pred_z: 1, rec: 5 }
+optimizer:
+  l2_reg: 0.00001
+  lr: 0.0012
+lr_decay: 0.996
+
+closed_loop_augmentation:
+  enabled: true
+  control_config: configs/control/knmpc_sensor_3d_base.yaml
+  frequency: 5
+  num_rollouts: 20
+  start_epoch: 50
+  dataset_policy: append

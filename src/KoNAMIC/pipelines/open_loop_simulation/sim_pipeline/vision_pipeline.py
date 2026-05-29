@@ -10,8 +10,8 @@ import torch
 from torch import Tensor
 
 from KoNAMIC.core import utils
-from KoNAMIC.pipelines.data_pipeline import ImageDatasetBuilder, StateInputsDatasetBuilder
-from KoNAMIC.core.models import load_vision_koop_model_for_eval, VisionKoopModel
+from KoNAMIC.pipelines.data_preparation import VisionBuilder, SensorBuilder
+from KoNAMIC.core.models import load_vision_model_for_eval, VisionKoopModel
 from KoNAMIC.pipelines.model_learning import build_ground_truth_from_images
 from ..vision_postprocessing import sim_output_processing_vision
 
@@ -143,7 +143,7 @@ def _load_model_and_scalers(
         case: utils.CaseConfig,
         run_dir: Path,
 ) -> Tuple[VisionKoopModel, Any, dict]:
-    koop_model, _x_scaler, u_scaler = load_vision_koop_model_for_eval(
+    koop_model, _x_scaler, u_scaler = load_vision_model_for_eval(
         params["model_params"],
         case.epoch,
         run_dir,
@@ -155,10 +155,10 @@ def _load_model_and_scalers(
 
 
 def _build_dataloader(dataset_params: Dict[str, Any], drone_dim: int) -> Dict[str, Any]:
-    sensor_builder = StateInputsDatasetBuilder(dataset_params, drone_dim)
+    sensor_builder = SensorBuilder(dataset_params, drone_dim)
     processed_sensor_data = sensor_builder.processed
 
-    im_dataset_builder = ImageDatasetBuilder(
+    im_dataset_builder = VisionBuilder(
         dataset_version=dataset_params["dataset_version"],
         num_val_datasets=2,
         resolution=dataset_params["resolution"],

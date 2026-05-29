@@ -17,9 +17,14 @@ def parse_args_comparison():
         help="Name of the overlay preset to load from the YAML file.",
     )
     parser.add_argument(
+        "--dt",
+        type=float,
+        required=True,
+    )
+    parser.add_argument(
         "--preset-file",
         type=Path,
-        default=PROJECT_ROOT / Path("configs/figures/open_loop.yaml"),
+        default=PROJECT_ROOT / Path("configs/pipelines/eval_comparisons/open_loop.yaml"),
         help="Path to the YAML file containing overlay figures.",
     )
     return parser.parse_args()
@@ -76,7 +81,7 @@ def parse_args_open_loop_simulation() -> argparse.Namespace:
         help="Drone dimension, only relevant for sensor modality if needed.",
     )
     parser.add_argument(
-        "--dataset-version",
+        "--data_generation-version",
         dest="dataset_version",
         type=int,
         default=None,

@@ -2,10 +2,7 @@ import numpy as np
 from typing import Callable
 
 from KoNAMIC.core.drone import DroneSpec
-from KoNAMIC.core.control.controllers import (
-    PIDPosAttController,
-    PIDPlanarPosAttController,
-)
+from KoNAMIC.core.control.controllers import PIDPosAttController, PIDPlanarPosAttController
 
 
 def as_array(value) -> np.ndarray:
@@ -31,7 +28,6 @@ def build_controller_factory(drone: DroneSpec, ctrl_cfg: dict) -> Callable:
             drone=drone,
             ctrl_cfg=ctrl_cfg,
         )
-
     raise ValueError(f"Unsupported drone_dim: {drone.drone_dim}")
 
 
@@ -58,7 +54,7 @@ def build_3d_controller_factory(drone: DroneSpec, ctrl_cfg: dict) -> Callable:
             att_cmd_alpha=ctrl_cfg["att_cmd_alpha"],
             moment_max=as_array(ctrl_cfg["moment_max"]),
             acc_xy_max=ctrl_cfg["acc_xy_max"] * drone.gravity,
-            max_moment_rate=as_array(ctrl_cfg["max_moment_rates"]),
+            max_moment_rate=as_array(ctrl_cfg["max_moment_rates"])*2,
         )
     return controller_factory
 

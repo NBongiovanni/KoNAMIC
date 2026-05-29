@@ -1,7 +1,6 @@
 figures:
   sensor_bilinear_vs_pid:
     modality: "sensor"
-    dt: 0.01
     trajectory_type: "setpoint_tracking"
     run_status: "final"
     task: "control"
@@ -21,7 +20,6 @@ figures:
 
   sensor_linear_vs_bilinear_plus_pid:
     modality: "sensor"
-    dt: 0.01
     trajectory_type: "setpoint_tracking"
     run_status: "final"
     task: "control"
@@ -44,7 +42,6 @@ figures:
 
   sensor_linear_vs_bilinear:
     modality: "sensor"
-    dt: 0.01
     trajectory_type: "setpoint_tracking"
     run_status: "final"
     task: "control"
@@ -64,7 +61,6 @@ figures:
 
   structured_vs_unstructured:
     modality: "sensor"
-    dt: 0.01
     trajectory_type: "setpoint_tracking"
     run_status: "final"
     task: "control"
@@ -85,7 +81,6 @@ figures:
 
   vision_linear_vs_bilinear:
     modality: "vision"
-    dt: 0.05
     trajectory_type: "setpoint_tracking"
     run_status: "final"
     task: "control"

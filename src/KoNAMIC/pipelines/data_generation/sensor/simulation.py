@@ -1,15 +1,16 @@
 import numpy as np
 
-from .sensor_generation_config import SensorGenerationConfig
-from .dataset import TrajectoryResult, Dataset
+from KoNAMIC.core.drone import DroneSpec
+from KoNAMIC.core.plants import Plant
+from KoNAMIC.core.control.controllers import BaseController
+from .dataset import TrajectoryResult
 
 
 def simulate_trajectory(
     *,
-    cfg: SensorGenerationConfig,
-    drone,
-    plant,
-    controller,
+    drone: DroneSpec,
+    plant: Plant,
+    controller: BaseController,
     x0: np.ndarray,
     ref_controller: np.ndarray,
     time: np.ndarray,
@@ -23,16 +24,13 @@ def simulate_trajectory(
 
     states_ref a la même dimension que states.
     """
-
     n_steps = len(time)
 
     x0 = np.asarray(x0, dtype=float).reshape(-1)
     ref_controller = np.asarray(ref_controller, dtype=float)
 
     if x0.shape != (drone.x_dim,):
-        raise ValueError(
-            f"x0 must have shape ({drone.x_dim},), got {x0.shape}"
-        )
+        raise ValueError(f"x0 must have shape ({drone.x_dim},), got {x0.shape}")
 
     if ref_controller.shape != (n_steps, drone.x_dim):
         raise ValueError(
@@ -74,8 +72,6 @@ def simulate_trajectory(
         states[k] = x_next
         inputs[k] = u_k
 
-        # Récupération des consignes internes si le contrôleur les écrit
-        # dans controller.x_ref_traj.
         if hasattr(controller, "x_ref_traj") and controller.x_ref_traj is not None:
             kk = min(k - 1, controller.x_ref_traj.shape[0] - 1)
 

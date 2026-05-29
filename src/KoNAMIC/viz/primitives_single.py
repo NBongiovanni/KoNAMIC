@@ -81,31 +81,33 @@ def plot_x_gt(
 
 
 def plot_u(
-        axes: Sequence[Axes],
-        time: np.ndarray,
-        u_traj: np.ndarray,
-        labels: list,
-        drone_dim: int,
-        *,
-        grouped_ylabel: str = r"Moments [N.m]",
-        group_legend_labels: Sequence[str] = (r"$\tau_1$", r"$\tau_2$", r"$\tau_3$"),
-):
+    axes: Sequence[Axes],
+    time: np.ndarray,
+    u_traj: np.ndarray,
+    labels: list,
+    drone_dim: int,
+    *,
+    grouped_ylabel: str = r"Moments [N.m]",
+    group_legend_labels: Sequence[str] = (r"$\tau_1$", r"$\tau_2$", r"$\tau_3$"),
+) -> None:
     if drone_dim == 2:
-        return plot_u_2d(
-                axes,
-                time,
-                u_traj,
-                labels,
-        )
-    elif drone_dim == 3:
-        return plot_u_3d(
+        plot_u_2d(
             axes,
             time,
             u_traj,
             labels,
         )
+    elif drone_dim == 3:
+        plot_u_3d(
+            axes,
+            time,
+            u_traj,
+            labels,
+            grouped_ylabel=grouped_ylabel,
+            group_legend_labels=group_legend_labels,
+        )
     else:
-        raise ValueError(f"Unsupported u_dim. Expected 2 or 4.")
+        raise ValueError(f"Unsupported drone_dim. Expected 2 or 3, got {drone_dim}.")
 
 
 def plot_u_2d(
@@ -129,7 +131,8 @@ def plot_u_3d(
     start_idx: int = 0,
     grouped_ylabel: str = r"$\tau$ [N.m]",
     group_legend_labels: Sequence[str] = (r"$\tau_1$", r"$\tau_2$", r"$\tau_3$"),
-) -> int:
+)-> None:
+
     u_dim = int(u_traj.shape[1])
     assert u_dim == 4, f"plot_u_3d expects u_dim=4, got {u_dim}"
     assert len(labels) >= 4
@@ -157,7 +160,6 @@ def plot_u_3d(
     for ax in u_axes:
         ax.grid(True, alpha=0.2)
         ax.set_xlabel("Time [s]")
-    return 2
 
 
 def plot_z(

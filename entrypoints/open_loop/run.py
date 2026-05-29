@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import multiprocessing
 import argparse
+import yaml
 
 import matplotlib
 matplotlib.use("Agg")
@@ -25,7 +26,17 @@ def main() -> None:
 
     case = load_case_from_args(args)
     logger = utils.setup_logging()
-    stamp_open_loop = utils.make_timestamped_dir(logger)
+    stamp_open_loop = utils.make_timestamp(logger)
+
+    paths = utils.build_run_paths(
+        args.modality,
+        args.drone_dim,
+        case.run_status,
+        case.model_stamp,
+        stamp_open_loop
+    )
+    with open(paths.run_dir / "dataset_params.yaml", "r", encoding="utf-8") as f:
+        dataset_params = yaml.safe_load(f)
 
     simulation_output = run_open_loop_pipeline_from_args(
         args=args,
@@ -38,7 +49,7 @@ def main() -> None:
     config = RenderOpenLoopConfig(
         modality=args.modality,
         drone_dim=case.drone_dim,
-        dt=case.dt,
+        dt=dataset_params["dt"],
         phase=args.phase,
         epoch=case.epoch,
         num_columns_x=2,

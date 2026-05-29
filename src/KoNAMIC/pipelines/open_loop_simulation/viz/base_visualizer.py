@@ -33,7 +33,6 @@ class BaseOpenLoopVisualizer(ABC):
         assert num_columns_inputs in (1, 2)
 
         self.drone_dim = int(drone_dim)
-        self.dt = float(dt)
         self.only_position = bool(only_position)
         self.num_columns_states = int(num_columns_states)
         self.num_columns_inputs = int(num_columns_inputs)

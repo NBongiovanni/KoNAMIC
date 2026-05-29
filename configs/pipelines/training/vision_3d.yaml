@@ -1,0 +1,13 @@
+drone_dim: 3
+num_epochs: 1000
+checkpoint_every: 10
+loss_weights: {y_pred: 250.0, y_rec: 40.0, z: 10.0, c: 0.15, a: 0.15}
+optimizer:
+  lr:
+    ab: 0.002
+    ae: 0.002
+  weight_decay: {ae: 8.0e-05, ab: 8.0e-05}
+lr_decay: 0.996
+curriculum:
+  phase_epoch_triggers: [ 2, 100, 800 ]
+  ramp_duration: 10

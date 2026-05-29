@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 from KoNAMIC.core import drone, utils
-from KoNAMIC.pipelines.data_pipeline import StateInputsDatasetBuilder
+from KoNAMIC.pipelines.data_preparation import SensorBuilder
 from KoNAMIC.core.models import load_sensor_koop_model_for_eval, SensorValForwardOutputs
 
 from .trajectories import OpenLoopSensorResult
@@ -76,7 +76,6 @@ def open_loop_simulation_sensor_pipeline(
         open_loop_eval_dir=paths.run_dir / "checkpoints" / "open_loop",
     )
 
-
 # ============================
 # Étapes du pipeline
 # ============================
@@ -108,7 +107,7 @@ def _prepare_paths_and_params(
 
 def _build_dataloader(params: dict, drone_dim: int):
     dataset_params = params["dataset_params"]
-    builder = StateInputsDatasetBuilder(dataset_params, drone_dim)
+    builder = SensorBuilder(dataset_params, drone_dim)
     return builder.data_loader
 
 
@@ -166,12 +165,12 @@ def _get_one_batch(dataloader: torch.utils.data.DataLoader) -> Tuple[torch.Tenso
     try:
         return next(iter(dataloader))
     except StopIteration as e:
-        ds_len = len(dataloader.dataset) if hasattr(dataloader, "dataset") else "unknown"
+        ds_len = len(dataloader.dataset) if hasattr(dataloader, "data_generation") else "unknown"
         bs = getattr(dataloader, "batch_size", "unknown")
         drop_last = getattr(dataloader, "drop_last", "unknown")
 
         raise RuntimeError(
-            f"DataLoader is empty: len(dataset)={ds_len}, batch_size={bs}, drop_last={drop_last}."
+            f"DataLoader is empty: len(data_generation)={ds_len}, batch_size={bs}, drop_last={drop_last}."
         ) from e
 
 

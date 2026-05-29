@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from pathlib import Path
+from typing import List, Tuple, Optional, Mapping
 import numpy as np
+import yaml
 
 from .dimensions import get_dimensions, get_num_views
 from .labels import get_x_labels, get_u_labels
@@ -22,28 +24,59 @@ class DroneSpec:
     It is intentionally minimal: only parameters that are
     actually used in the project are included.
     """
-
-    # ------------------------------------------------------------------
-    # Core definition
-    # ------------------------------------------------------------------
     name: str
     drone_dim: int
-
-    # ------------------------------------------------------------------
-    # Physical parameters
-    # ------------------------------------------------------------------
     mass: float
     gravity: float
     arm_length: float
     inertia: np.ndarray  # (3,) or (3,3)
 
-    # Control limits (optional but useful)
-    u_min: Optional[np.ndarray] = None
-    u_max: Optional[np.ndarray] = None
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> "DroneSpec":
+        """
+        Load a DroneSpec from a YAML configuration file.
+        """
+        path = Path(path)
 
-    # ------------------------------------------------------------------
-    # Validation
-    # ------------------------------------------------------------------
+        if not path.exists():
+            raise FileNotFoundError(f"Drone config file not found: {path}")
+
+        with path.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+
+        if data is None:
+            raise ValueError(f"Drone config file is empty: {path}")
+
+        if not isinstance(data, Mapping):
+            raise TypeError(
+                f"Expected YAML file to contain a mapping/dict, got {type(data).__name__}"
+            )
+
+        required_keys = {
+            "name",
+            "drone_dim",
+            "mass",
+            "gravity",
+            "arm_length",
+            "inertia",
+        }
+
+        missing_keys = required_keys - data.keys()
+        if missing_keys:
+            raise KeyError(
+                f"Missing required key(s) in drone config {path}: "
+                f"{sorted(missing_keys)}"
+            )
+
+        return cls(
+            name=str(data["name"]),
+            drone_dim=int(data["drone_dim"]),
+            mass=float(data["mass"]),
+            gravity=float(data["gravity"]),
+            arm_length=float(data["arm_length"]),
+            inertia=np.asarray(data["inertia"], dtype=float),
+        )
+
     def __post_init__(self):
         if self.drone_dim not in (1, 2, 3):
             raise ValueError(f"Invalid drone_dim={self.drone_dim}")
@@ -54,6 +87,9 @@ class DroneSpec:
         if self.gravity <= 0:
             raise ValueError(f"gravity must be > 0, got {self.gravity}")
 
+        if self.arm_length <= 0:
+            raise ValueError(f"arm_length must be > 0, got {self.arm_length}")
+
         if self.inertia is not None:
             inertia = np.asarray(self.inertia)
             if inertia.shape not in [(3,), (3, 3)]:
@@ -62,29 +98,6 @@ class DroneSpec:
                 )
             object.__setattr__(self, "inertia", inertia.astype(float))
 
-        if self.u_min is not None:
-            u_min = np.asarray(self.u_min, dtype=float)
-            if u_min.shape != (self.u_dim,):
-                raise ValueError(
-                    f"u_min must have shape ({self.u_dim},), got {u_min.shape}"
-                )
-            object.__setattr__(self, "u_min", u_min)
-
-        if self.u_max is not None:
-            u_max = np.asarray(self.u_max, dtype=float)
-            if u_max.shape != (self.u_dim,):
-                raise ValueError(
-                    f"u_max must have shape ({self.u_dim},), got {u_max.shape}"
-                )
-            object.__setattr__(self, "u_max", u_max)
-
-        if self.u_min is not None and self.u_max is not None:
-            if np.any(self.u_min > self.u_max):
-                raise ValueError("u_min must be <= u_max")
-
-    # ------------------------------------------------------------------
-    # Dimensions
-    # ------------------------------------------------------------------
     @property
     def x_dim(self) -> int:
         x_dim, _, _ = get_dimensions(self.drone_dim)
@@ -109,9 +122,6 @@ class DroneSpec:
     def num_views(self) -> int:
         return get_num_views(self.drone_dim)
 
-    # ------------------------------------------------------------------
-    # Labels
-    # ------------------------------------------------------------------
     def get_x_labels(self, only_positions: bool = False) -> List[str]:
         return get_x_labels(self.drone_dim, only_positions)
 
@@ -122,9 +132,6 @@ class DroneSpec:
     def hover_thrust(self) -> float:
         return self.mass * self.gravity
 
-    # ------------------------------------------------------------------
-    # State structure
-    # ------------------------------------------------------------------
     @property
     def angle_indexes(self) -> List[int]:
         return get_angle_indexes(self.drone_dim)
@@ -133,15 +140,9 @@ class DroneSpec:
         return convert_rad_to_deg_np(x, self.angle_indexes)
 
     def split_state(self, x: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Split state into (positions/orientation, velocities)
-        """
         half = self.x_dim // 2
         return x[..., :half], x[..., half:]
 
-    # ------------------------------------------------------------------
-    # Validation helpers
-    # ------------------------------------------------------------------
     def check_state_dim(self, x: np.ndarray):
         if x.shape[-1] != self.x_dim:
             raise ValueError(
@@ -154,14 +155,21 @@ class DroneSpec:
                 f"Expected control dim {self.u_dim}, got {u.shape[-1]}"
             )
 
-    # ------------------------------------------------------------------
-    # Physics helpers (minimal but useful)
-    # ------------------------------------------------------------------
+    def convert_available_angles_to_deg(self, x: np.ndarray) -> np.ndarray:
+        """
+        Convert all available angle components from radians to degrees.
+
+        This is useful for partial states or references that do not contain
+        all state components.
+        """
+        angle_indexes = [
+            idx for idx in self.angle_indexes
+            if idx < x.shape[-1]
+        ]
+        return convert_rad_to_deg_np(x, angle_indexes)
+
     @property
     def inertia_matrix(self) -> Optional[np.ndarray]:
-        """
-        Return inertia as a full matrix.
-        """
         if self.inertia is None:
             return None
 
@@ -170,9 +178,6 @@ class DroneSpec:
 
         return self.inertia
 
-    # ------------------------------------------------------------------
-    # Debug / display
-    # ------------------------------------------------------------------
     def __repr__(self) -> str:
         return (
             f"DroneSpec(name={self.name!r}, dim={self.drone_dim}, "

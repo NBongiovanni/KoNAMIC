@@ -41,7 +41,7 @@ def load_vision_koop_model_for_train(
 
 def load_koop_model_for_eval(modality: str, model_params, epoch: int, run_dir: Path):
     if modality == "vision":
-        koop_model, x_scaler, u_scaler = load_vision_koop_model_for_eval(
+        koop_model, x_scaler, u_scaler = load_vision_model_for_eval(
             model_params,
             epoch,
             run_dir,
@@ -57,7 +57,7 @@ def load_koop_model_for_eval(modality: str, model_params, epoch: int, run_dir: P
     return koop_model, x_scaler, u_scaler
 
 
-def load_vision_koop_model_for_eval(
+def load_vision_model_for_eval(
         model_params: dict,
         epoch: int,
         run_dir: Path

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from KoNAMIC.core import utils
 
 @dataclass(frozen=True)
 class ModelSimuConfig:
@@ -13,11 +14,10 @@ class ModelSimuConfig:
 class OpenLoopComparisonConfig:
     num_traj: int = 10
     modality: str = "sensor"
-    dt: float = 0.02
     trajectory_type: str = "setpoint_tracking"
     run_status: str = "interim"
     task: str = "open_loop"
-    output_dir: Path = Path("/home/nicolas/Desktop/KoNAMIC/outputs")
+    output_dir: Path = utils.find_project_root() / Path("/outputs")
     comparison_name: str = "open_loop_overlay"
 
     models: list[ModelSimuConfig] = field(default_factory=lambda: [

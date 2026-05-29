@@ -2,7 +2,6 @@ figures:
   sensor_state_inclusion_dt02:
     num_traj: 10
     modality: "sensor"
-    dt: 0.02
     trajectory_type: "setpoint_tracking"
     run_status: "final"
     task: "open_loop"
@@ -17,7 +16,6 @@ figures:
   sensor_linear_vs_bilinear_final:
     num_traj: 10
     modality: "sensor"
-    dt: 0.01
     trajectory_type: "setpoint_tracking"
     run_status: "final"
     task: "open_loop"
@@ -32,7 +30,6 @@ figures:
   sensor_state_inclusion_v2:
     num_traj: 30
     modality: "sensor"
-    dt: 0.02
     trajectory_type: "setpoint_tracking"
     run_status: "interim"
     task: "open_loop"
@@ -47,7 +44,6 @@ figures:
     vision_linear_vs_bilinear_final:
       num_traj: 10
       modality: "vision"
-      dt: 0.05
       trajectory_type: "setpoint_tracking"
       run_status: "final"
       task: "open_loop"

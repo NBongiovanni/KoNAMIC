@@ -19,11 +19,11 @@ class OpenLoopMultiVisualizer(BaseOpenLoopVisualizer):
     def __init__(
         self,
         task: str,
+        dt: float,
         drone_dim: int,
         only_position: bool,
         plot_dir: Path,
         names: Sequence[str],
-        dt: float,
         colors: Sequence[str],
         num_columns_states: int,
         num_columns_inputs: int,
@@ -39,6 +39,7 @@ class OpenLoopMultiVisualizer(BaseOpenLoopVisualizer):
         )
 
         self.task = task
+        self.dt=dt
         self.plot_dir = Path(plot_dir)
         self.names = list(names)
         self.colors = list(colors)

@@ -23,9 +23,9 @@ class PredictionHorizon:
 
 @dataclass
 class TrainingConfig:
-    dataset_params: dict
-    training_params: dict
     model_params: dict
+    training_params: dict
+    dataset_params: dict
     control_params: dict
 
     @property
@@ -33,29 +33,35 @@ class TrainingConfig:
         return PredictionHorizon.from_dataset_params(self.dataset_params)
 
     @classmethod
-    def from_dict(cls, params: dict, control_params, dataset_params) -> "TrainingConfig":
-        params = deepcopy(params)
+    def from_dict(
+            cls, model_params: dict, training_params, control_params, dataset_params
+    ) -> "TrainingConfig":
         return cls(
             dataset_params=dataset_params,
-            training_params=params["training_params"],
-            model_params=params["model_params"],
+            training_params=training_params,
+            model_params=model_params,
             control_params=control_params,
         )
 
     @classmethod
-    def load_base_config(cls, name: str, modality: str, drone_dim: int) -> "TrainingConfig":
+    def load_base_config(cls, modality: str, drone_dim: int) -> "TrainingConfig":
         root = utils.find_project_root()
 
-        training_config_path = root / "configs" / "training" / f"{name}.yaml"
-        control_config_path = root / "configs" / "control" / f"knmpc_{modality}_{drone_dim}d_base.yaml"
-        dataset_config_path = root / "configs" / "data_preparation" / f"{modality}_{drone_dim}d.yaml"
+        config_path = root / "configs"
 
-        params = utils.load_yaml(training_config_path)
+        training_config_path = config_path / "pipelines" / "training" / f"{modality}_{drone_dim}d.yaml"
+        model_config_path = config_path / "components" / "models" / f"{modality}_{drone_dim}d.yaml"
+        control_config_path = config_path / "components" / "controllers" / "knmpc" / f"{modality}_{drone_dim}d_base.yaml"
+        dataset_config_path = config_path / "pipelines" / "data_preparation" / f"{modality}_{drone_dim}d.yaml"
+
+        training_params = utils.load_yaml(training_config_path)
+        model_params = utils.load_yaml(model_config_path)
         control_params = utils.load_yaml(control_config_path)
         dataset_params = utils.load_yaml(dataset_config_path)
 
         return cls.from_dict(
-            params=params,
+            model_params=model_params,
+            training_params=training_params,
             control_params=control_params,
             dataset_params=dataset_params,
         )
