@@ -77,10 +77,10 @@ The vision pipeline loads the previously generated sensor trajectories, renders 
 
 ## Training a model
 
-A single training entry point is used for both sensor and visual data:
+A single training entry point is used for both non-visual and visual measurements:
 
 ```bash
-python entrypoints/training/train_model.py \
+python entrypoints/train_model.py \
   --modality <sensor_or_vision> \
   --drone_dim 2 \
   --dynamics linear \
@@ -89,10 +89,10 @@ python entrypoints/training/train_model.py \
   --seed 0
 ```
 
-For example, to train a model from sensor data:
+For example, to train a model from non-visual measurements:
 
 ```bash
-python entrypoints/training/train_model.py \
+python entrypoints/train_model.py \
   --modality sensor \
   --drone_dim 2 \
   --dynamics linear \
@@ -101,10 +101,10 @@ python entrypoints/training/train_model.py \
   --seed 0
 ```
 
-To train a model from visual data:
+To train a model from visual measurements:
 
 ```bash
-python entrypoints/training/train_model.py \
+python entrypoints/train_model.py \
   --modality vision \
   --drone_dim 2 \
   --dynamics linear \
@@ -239,17 +239,6 @@ Depending on the workflow, the code writes:
 - generated figures and comparison plots.
 
 Outputs are stored in timestamped run directories to avoid overwriting previous experiments.
-
-## Notes for developers
-
-Several subpackages define a local `cli.py` file. This is intentional: each `cli.py` contains the argument parser for a specific pipeline. To avoid ambiguity, users should launch the scripts in `entrypoints/` rather than invoking `cli.py` files directly.
-
-When adding a new workflow, prefer the following pattern:
-
-1. define the parser in the relevant pipeline module;
-2. expose a clear script in `entrypoints/`;
-3. document the minimal command in this README;
-4. save the resolved configuration next to the generated results.
 
 ## Citation
 
