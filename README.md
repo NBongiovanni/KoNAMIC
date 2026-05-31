@@ -242,8 +242,13 @@ Outputs are stored in timestamped run directories to avoid overwriting previous 
 
 ## Citation
 
+## Citation
+
 This repository accompanies the following paper:
 
 N. Bongiovanni, B. Mavkov, R. Martins, and G. Allibert, “Identification and Control of a Planar Quadrotor from Visual Data Using Koopman Representations,” in *International Conference on Unmanned Aircraft Systems (ICUAS)*, 2026.
 
+This repository is also related to the PhD thesis of Nicolas Bongiovanni, conducted at Université Côte d’Azur, CNRS, I3S laboratory. The thesis is not publicly available online yet; a complete reference will be added once it becomes available.
+
 If you use this code or build upon this work, please cite the paper above.
+
