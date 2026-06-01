@@ -8,12 +8,44 @@ from .path_utils import build_base_output_dir, make_timestamp
 class RunPaths:
     run_dir: Path
     log_dir: Path
-    open_loop_eval_dir: Path | None = None
-    closed_loop_eval_dir: Path | None = None
 
     @property
     def checkpoints_dir(self) -> Path:
         return self.run_dir / "checkpoints"
+
+    @property
+    def eval_dir(self) -> Path:
+        return self.run_dir / "eval"
+
+    def training_eval_dir(self, eval_type: str, epoch: int) -> Path:
+        """
+        Directory for evaluations performed automatically during training.
+
+        Example:
+            run_dir/eval/during_training/open_loop/epoch_0020
+            run_dir/eval/during_training/closed_loop/epoch_0040
+        """
+        return (
+            self.eval_dir
+            / "during_training"
+            / eval_type
+            / f"epoch_{epoch:04d}"
+        )
+
+    def standalone_eval_dir(self, eval_type: str, stamp_eval: str) -> Path:
+        """
+        Directory for evaluations launched independently from the training loop.
+
+        Example:
+            run_dir/eval/standalone/open_loop/2026-05-31_15-20-10
+            run_dir/eval/standalone/closed_loop/2026-05-31_15-45-33
+        """
+        return (
+            self.eval_dir
+            / "standalone"
+            / eval_type
+            / stamp_eval
+        )
 
 
 def build_run_paths(
@@ -21,8 +53,6 @@ def build_run_paths(
     drone_dim: int,
     run_status: str,
     stamp_run: str,
-    stamp_open_loop: str | None = None,
-    stamp_closed_loop: str | None = None,
 ) -> RunPaths:
 
     runs_base_dir = build_base_output_dir(
@@ -30,41 +60,26 @@ def build_run_paths(
         run_status=run_status,
         drone_dim=drone_dim,
     )
+
     run_dir = runs_base_dir / "models" / stamp_run
     log_dir = runs_base_dir / "logs" / stamp_run
-    checkpoints_dir = run_dir / stamp_run
 
-    if stamp_open_loop is not None:
-        open_loop_eval_dir = run_dir / "eval" / "open_loop" / stamp_open_loop
-    else:
-        open_loop_eval_dir = None
-
-    if stamp_closed_loop is not None:
-        closed_loop_eval_dir = run_dir / "eval" / "closed_loop" / stamp_closed_loop
-    else:
-        closed_loop_eval_dir = None
-
-    run_dir.mkdir(parents=True, exist_ok=True)
-    log_dir.mkdir(parents=True, exist_ok=True)
-    checkpoints_dir.mkdir(parents=True, exist_ok=True)
-
-    return RunPaths(
+    run_paths = RunPaths(
         run_dir=run_dir,
         log_dir=log_dir,
-        open_loop_eval_dir=open_loop_eval_dir,
-        closed_loop_eval_dir=closed_loop_eval_dir,
     )
 
+    run_paths.run_dir.mkdir(parents=True, exist_ok=True)
+    run_paths.log_dir.mkdir(parents=True, exist_ok=True)
+    run_paths.checkpoints_dir.mkdir(parents=True, exist_ok=True)
+
+    return run_paths
 
 def create_run_stamp(dynamics: str, run_id: str, logger) -> str:
-    prefix_by_dynamics = {
-        "linear": "lin",
-        "bilinear": "bilin",
-    }
+    prefix_by_dynamics = {"linear": "lin", "bilinear": "bilin"}
 
     try:
         prefix = prefix_by_dynamics[dynamics]
     except KeyError as exc:
         raise ValueError(f"Unknown dynamics model: {dynamics}") from exc
-
     return f"{prefix}_{run_id}_{make_timestamp(logger)}"

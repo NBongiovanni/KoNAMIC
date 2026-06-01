@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Literal
 
+from KoNAMIC.core.drone import DroneSpec
 from .sensor_generation_config import SensorGenerationConfig
 
 Profile2D = Literal["hover", "step_z", "step_y", "step_yz"]
 Profile3D = Literal["hover", "step_z", "step_x", "step_y", "step_xyz"]
-
 Profile = Profile2D | Profile3D
 
 
@@ -14,8 +14,9 @@ def get_profile(
     cfg: SensorGenerationConfig,
     traj_idx: int,
     num_traj: int,
-    drone,
+    drone: DroneSpec,
 ) -> Profile:
+
     if drone.drone_dim == 2:
         return get_profile_2d(
             cfg=cfg,
@@ -71,3 +72,25 @@ def get_profile_3d(
         return "step_y"
 
     return "step_xyz"
+
+
+def select_one_traj_per_profile(
+    *,
+    config: SensorGenerationConfig,
+    num_traj: int,
+    drone: DroneSpec,
+) -> tuple[int, ...]:
+    traj_indices_by_profile = {}
+
+    for traj_idx in range(num_traj):
+        profile = get_profile(
+            config,
+            traj_idx,
+            num_traj,
+            drone,
+        )
+
+        if profile not in traj_indices_by_profile:
+            traj_indices_by_profile[profile] = traj_idx
+
+    return tuple(traj_indices_by_profile.values())

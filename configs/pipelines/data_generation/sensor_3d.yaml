@@ -26,8 +26,8 @@ trajectory_generation:
 
 splits:
   train:
-    num_traj: 10
+    num_traj: 3000
   val_1:
-    num_traj: 10
+    num_traj: 100
   val_2:
-    num_traj: 10
+    num_traj: 100

@@ -7,6 +7,7 @@ import torch
 from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 
+from KoNAMIC.core import utils
 from KoNAMIC.core.drone import DroneSpec
 from KoNAMIC.core.models import SensorKoopModel
 from KoNAMIC.core.simulation import compute_closed_loop_metrics
@@ -32,6 +33,8 @@ class ModelEvaluator:
     def __init__(
         self,
         modality: str,
+        run_paths: utils.RunPaths,
+        current_epoch: int,
         model_params: dict,
         control_params: dict,
         drone: DroneSpec,
@@ -47,8 +50,11 @@ class ModelEvaluator:
     ) -> None:
 
         self.modality = modality
+        self.current_epoch = current_epoch
+        self.run_paths = run_paths
         self.model_params = model_params
         self.control_params = control_params
+        self.control_params["ctrl_dir"] = run_paths.training_eval_dir("closed_loop", self.current_epoch)
         self.drone = drone
         self.koop_model = koop_model
         self.data_loader = data_loaders
@@ -91,6 +97,8 @@ class ModelEvaluator:
     def eval_closed_loop(self) -> list[ClosedLoopTrajectory]:
         closed_loop_evaluator = ClosedLoopEval(
             self.modality,
+            self.current_epoch,
+            self.run_paths,
             self.model_params,
             self.control_params,
             self.koop_model,

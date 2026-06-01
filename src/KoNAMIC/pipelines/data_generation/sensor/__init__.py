@@ -1,6 +1,5 @@
 from .sensor_generation_config import SensorGenerationConfig
-from .dataset import Dataset
-from .pipeline import generate_dataset, generate_all_splits
-from .save import save_dataset_npz
+from .sensor_split_dataset import SensorSplitDataset
+from .pipeline import generate_one_dataset_split, generate_all_dataset_splits
 
 from .controller_factory import build_controller_factory

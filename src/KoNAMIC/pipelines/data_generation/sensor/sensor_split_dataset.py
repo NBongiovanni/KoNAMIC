@@ -13,7 +13,7 @@ class TrajectoryResult:
 
 
 @dataclass
-class Dataset:
+class SensorSplitDataset:
     states: np.ndarray      # (N, T, 12)
     inputs: np.ndarray      # (N, T, 4)
     states_ref: np.ndarray  # (N, T, 6)

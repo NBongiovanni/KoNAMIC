@@ -30,9 +30,10 @@ SensorModelAndTC: TypeAlias = tuple[SensorKoopModel, TrainingContext]
 VisionModelAndScaler: TypeAlias = tuple[VisionKoopModel, StandardScaler]
 SensorModelAndScaler: TypeAlias = tuple[SensorKoopModel, StandardScaler, StandardScaler]
 
-def init_model(modality: str, model_params: dict, training_params: dict):
+
+def init_model(modality: str, run_paths, model_params: dict, training_params: dict):
     if modality == "sensor":
-        return init_sensor_model(model_params, training_params)
+        return init_sensor_model(run_paths, model_params, training_params)
     elif modality == "vision":
         return init_vision_model(model_params, training_params)
     else:
@@ -65,7 +66,9 @@ def init_vision_model(model_params: dict, training_params: dict):
     return model, training_context
 
 
-def init_sensor_model(model_params: dict, training_params: dict):
+def init_sensor_model(
+        run_paths: utils.RunPaths, model_params: dict, training_params: dict
+):
     model, device = _build_sensor_model(model_params)
 
     optimizer_cfg = training_params["optimizer"]
@@ -79,7 +82,7 @@ def init_sensor_model(model_params: dict, training_params: dict):
         step_size=1,
         gamma=training_params["lr_decay"],
     )
-    writer = SummaryWriter(log_dir=str(training_params["log_dir"]))
+    writer = SummaryWriter(log_dir=str(run_paths.log_dir))
 
     training_context = TrainingContext(
         optimizer=optimizer,

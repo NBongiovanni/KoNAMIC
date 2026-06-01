@@ -1,6 +1,6 @@
 from .vision.generator import VisionDatasetRenderer
 from .cli import parse_dataset_generation_args
 from .sensor.controller_factory import build_controller_factory
-from .sensor.pipeline import generate_all_splits
+from .sensor.pipeline import generate_all_dataset_splits
 from .sensor.sensor_generation_config import SensorGenerationConfig
 from .vision.vision_generation_config import VisionGenerationConfig

@@ -121,7 +121,7 @@ class SensorLoader:
             raise ValueError(f"Expected timeVec as (T,), got {time.shape}")
 
         if x.shape[0] != u.shape[0]:
-            raise ValueError(f"N_traj mismatch: states {x.shape}, inputs {u.shape}")
+            raise ValueError(f"N_traj mismatch: states {x.shape[0]-1}, inputs {u.shape[0]}")
         if x.shape[0] != x_ref.shape[0]:
             raise ValueError(f"N_traj mismatch: states {x.shape}, statesRef {x_ref.shape}")
 
@@ -137,7 +137,7 @@ class SensorLoader:
             x_ref = x_ref[:, ::downsample_factor, :]
             time = time[::downsample_factor]
 
-        if x.shape[1] != u.shape[1]:
+        if x.shape[1]-1 != u.shape[1]:
             raise ValueError(f"T mismatch: states {x.shape}, inputs {u.shape}")
         if x.shape[1] != x_ref.shape[1]:
             raise ValueError(f"T mismatch: states {x.shape}, statesRef {x_ref.shape}")

@@ -10,6 +10,7 @@ from torch import Tensor
 from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 
+from KoNAMIC.core import utils
 from KoNAMIC.core.drone import DroneSpec
 from KoNAMIC.core.models import (
     SensorKoopModel,
@@ -19,11 +20,7 @@ from KoNAMIC.core.models import (
     TrainingContext,
 )
 
-from ..losses.compute import (
-    SensorLossComputer,
-    VisionLossComputer,
-    mean_sub_losses,
-)
+from ..losses.compute import SensorLossComputer, VisionLossComputer, mean_sub_losses
 from ..losses.logger import TrainingLogger
 from ..evaluation.evaluator import ModelEvaluator
 from ..evaluation.closed_loop_replay import ClosedLoopReplayBuffer, ReplayConfig
@@ -41,6 +38,7 @@ class Trainer:
     def __init__(
         self,
         modality: str,
+        run_paths: utils.RunPaths,
         model: KoopModel,
         training_ctx: TrainingContext,
         data_loaders: dict,
@@ -51,10 +49,10 @@ class Trainer:
         model_params: dict,
         training_params: dict,
         control_params: dict,
-        run_dir: Path,
     ) -> None:
 
         self.modality = modality
+        self.run_paths = run_paths
         self.model_params = model_params
         self.control_params = control_params
         self.training_params = training_params
@@ -94,12 +92,14 @@ class Trainer:
         )
 
         self.checkpoint_manager = CheckpointManager(
-            checkpoints_dir=run_dir / "checkpoints",
+            checkpoints_dir=self.run_paths.checkpoints_dir,
             checkpoint_every=int(training_params["checkpoint_every"]),
         )
 
         self.evaluator = ModelEvaluator(
             modality=self.modality,
+            run_paths=self.run_paths,
+            current_epoch = self.current_epoch,
             model_params=self.model_params,
             control_params=self.control_params,
             drone=self.drone,
@@ -180,6 +180,8 @@ class Trainer:
         )
 
         if self.closed_loop_replay is not None:
+            control_dir = self.run_paths.training_eval_dir("closed_loop", self.current_epoch)
+            control_dir.mkdir(parents=True, exist_ok=True)
             replay_loader = self.closed_loop_replay.make_dataloader()
             if replay_loader is not None:
                 self._train_on_loader(

@@ -8,14 +8,14 @@ from KoNAMIC.viz.style import GT_COLOR
 
 
 def plot_x(
-        axes: Sequence[Axes],
-        time: np.ndarray,
-        labels: list[str],
-        x: np.ndarray,
-        x_gt: np.ndarray,
-        show_legend: bool = True,
-        label_x: str = "Predicted trajectory",
-        label_gt: str = "True trajectory"
+    axes: Sequence[Axes],
+    time: np.ndarray,
+    labels: list[str],
+    x: np.ndarray,
+    x_gt: np.ndarray,
+    show_legend: bool = True,
+    label_x: str = "Predicted trajectory",
+    label_gt: str = "True trajectory"
 ) -> None:
     """
     Trace l'état réel et prédit.
@@ -46,12 +46,12 @@ def plot_x(
 
 
 def plot_x_gt(
-        axes: Sequence[Axes],
-        time: np.ndarray,
-        labels: list[str],
-        x_gt: np.ndarray,
-        show_legend: bool = True,
-        label_gt: str = "True trajectory"
+    axes: Sequence[Axes],
+    time: np.ndarray,
+    labels: list[str],
+    x_gt: np.ndarray,
+    show_legend: bool = True,
+    label_gt: str = "True trajectory"
 ) -> None:
     """
     Trace l'état réel et prédit.
@@ -111,10 +111,10 @@ def plot_u(
 
 
 def plot_u_2d(
-        axes: Sequence[Axes],
-        time: np.ndarray,
-        u_traj: np.ndarray,
-        labels: list
+    axes: Sequence[Axes],
+    time: np.ndarray,
+    u_traj: np.ndarray,
+    labels: list
 ) -> None:
     for dim in range(2):
         axes[dim].plot(time, u_traj[:, dim])
@@ -144,12 +144,12 @@ def plot_u_3d(
     styles = ["-", "--", ":"]
 
     # Premier input seul
-    ax0.plot(time, u_traj[:, 0])
+    ax0.plot(time[:-1], u_traj[:, 0])
     ax0.set_ylabel(labels[0])
 
     # Trois moments regroupés sur le même axe
     for k, j in enumerate([1, 2, 3]):
-        axM.plot(time, u_traj[:, j],  color="black", linestyle=styles[k])
+        axM.plot(time[:-1], u_traj[:, j],  color="black", linestyle=styles[k])
 
     axM.set_ylabel(grouped_ylabel)
 
@@ -163,10 +163,10 @@ def plot_u_3d(
 
 
 def plot_z(
-        axes: Sequence[Axes],
-        time: np.ndarray,
-        z_proj: np.ndarray,
-        z_pred: np.ndarray,
+    axes: Sequence[Axes],
+    time: np.ndarray,
+    z_proj: np.ndarray,
+    z_pred: np.ndarray,
 ) -> None:
     """
     Trace la variable latente réelle et projetée.

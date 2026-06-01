@@ -3,7 +3,7 @@ import numpy as np
 from KoNAMIC.core.drone import DroneSpec
 from KoNAMIC.core.plants import Plant
 from KoNAMIC.core.control.controllers import BaseController
-from .dataset import TrajectoryResult
+from .sensor_split_dataset import TrajectoryResult
 
 
 def simulate_trajectory(
@@ -39,7 +39,7 @@ def simulate_trajectory(
         )
 
     states = np.zeros((n_steps, drone.x_dim), dtype=float)
-    inputs = np.zeros((n_steps, drone.u_dim), dtype=float)
+    inputs = np.zeros((n_steps-1, drone.u_dim), dtype=float)
     states_ref = ref_controller.copy()
 
     states[0] = x0
@@ -70,7 +70,7 @@ def simulate_trajectory(
             )
 
         states[k] = x_next
-        inputs[k] = u_k
+        inputs[k-1] = u_k
 
         if hasattr(controller, "x_ref_traj") and controller.x_ref_traj is not None:
             kk = min(k - 1, controller.x_ref_traj.shape[0] - 1)

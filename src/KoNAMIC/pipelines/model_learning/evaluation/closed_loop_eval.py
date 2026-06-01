@@ -5,8 +5,9 @@ import os
 
 from sklearn.preprocessing import StandardScaler
 
+from KoNAMIC.core import utils
 from KoNAMIC.core.drone import DroneSpec
-from KoNAMIC.core.plants import Quad3D, build_quad_plant
+from KoNAMIC.core.plants import build_quad_plant
 from KoNAMIC.core.models import SensorKoopModel
 from KoNAMIC.core.simulation import ClosedLoopTrajectory
 from KoNAMIC.core.control.controllers import KoopmanMPCController
@@ -23,6 +24,8 @@ class ClosedLoopEval:
     def __init__(
         self,
         modality: str,
+        current_epoch: int,
+        run_paths: utils.RunPaths,
         model_params: dict,
         control_params: dict,
         koop_model: SensorKoopModel,
@@ -32,6 +35,8 @@ class ClosedLoopEval:
     ) -> None:
 
         self.modality = modality
+        self.current_epoch = current_epoch
+        self.run_paths = run_paths
         self.model_params = model_params
         self.control_params = control_params
         self.koop_model = koop_model
@@ -42,10 +47,11 @@ class ClosedLoopEval:
 
     def run_simulation(self) -> list[ClosedLoopTrajectory]:
         with suppress_stdout_stderr_fd():
+            controller_dir = self.run_paths.training_eval_dir("closed_loop", self.current_epoch)
             controller = KoopmanMPCController(
                 model_params=self.model_params,
                 control_params=self.control_params,
-                solver_backend=AcadosBackend(self.control_params),
+                solver_backend=AcadosBackend(controller_dir, self.control_params),
                 koop_model=self.koop_model,
                 u_scaler=self.u_scaler,
                 x_scaler=self.x_scaler,

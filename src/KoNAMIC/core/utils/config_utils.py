@@ -12,7 +12,9 @@ def load_yaml(path):
 
 
 def save_yaml(
-    params: dict, path: Path | None = None, name="sensor_3d.yaml"
+        params: dict,
+        path: Path | None = None,
+        name="sensor_3d.yaml"
 ) -> None:
     """
     Save config dict as a YAML file.
@@ -27,10 +29,7 @@ def save_yaml(
     name : str, optional
         Name of the YAML file (default: "sensor_3d.yaml").
     """
-    if path is None:
-        save_path = Path(params["training_params"]["run_dir"])
-    else:
-        save_path = Path(path)
+    save_path = Path(path)
     save_path.mkdir(parents=True, exist_ok=True)
 
     with open(save_path / name, "w", encoding="utf-8") as f:

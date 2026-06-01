@@ -53,11 +53,13 @@ class _AcadosInternals:
     ocp: AcadosOcp
     solver: AcadosOcpSolver
 
+
 class AcadosBackend(SolverBackend):
-    def __init__(self, control_params: dict):
+    def __init__(self, control_run_dir: Path, control_params: dict):
         super().__init__()
-        self.ctrl_params = control_params
+        self.control_params = control_params
         self.solver_options = control_params["solver_options"]
+        self.control_run_dir = control_run_dir
 
         self._internals: Optional[_AcadosInternals] = None
 
@@ -135,7 +137,7 @@ class AcadosBackend(SolverBackend):
         ocp.constraints.lbx_0 = np.zeros(self.state_dim)
         ocp.constraints.ubx_0 = np.zeros(self.state_dim)
 
-        build_dir = self.ctrl_params["control_runs_dir"]
+        build_dir = self.control_run_dir
         json_path = str(build_dir / "acados_ocp.json")
 
         try:

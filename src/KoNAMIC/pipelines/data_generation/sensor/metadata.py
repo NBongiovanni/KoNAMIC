@@ -2,11 +2,11 @@ from dataclasses import asdict
 
 from KoNAMIC.core.drone import DroneSpec
 from .sensor_generation_config import SensorGenerationConfig
-from .dataset import Dataset
+from .sensor_split_dataset import SensorSplitDataset
 
 
 def build_metadata(
-    dataset: Dataset, cfg: SensorGenerationConfig, split: str, drone: DroneSpec,
+    dataset: SensorSplitDataset, cfg: SensorGenerationConfig, split: str, drone: DroneSpec,
 ) -> dict:
 
     states_names = get_state_names(drone)

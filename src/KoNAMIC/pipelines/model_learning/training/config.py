@@ -34,7 +34,11 @@ class TrainingConfig:
 
     @classmethod
     def from_dict(
-            cls, model_params: dict, training_params, control_params, dataset_params
+            cls,
+            model_params: dict,
+            training_params: dict,
+            control_params: dict,
+            dataset_params: dict
     ) -> "TrainingConfig":
         return cls(
             dataset_params=dataset_params,
@@ -48,7 +52,6 @@ class TrainingConfig:
         root = utils.find_project_root()
 
         config_path = root / "configs"
-
         training_config_path = config_path / "pipelines" / "training" / f"{modality}_{drone_dim}d.yaml"
         model_config_path = config_path / "components" / "models" / f"{modality}_{drone_dim}d.yaml"
         control_config_path = config_path / "components" / "controllers" / "knmpc" / f"{modality}_{drone_dim}d_base.yaml"
@@ -90,9 +93,3 @@ class TrainingConfig:
             if args.state_in_z:
                 self.model_params["z_dynamics"]["structured_AB"] = False
         self.training_params["seed"] = args.seed
-
-    def define_paths(self, paths: utils.RunPaths) -> None:
-        self.training_params["run_dir"] = paths.run_dir
-        self.control_params["control_runs_dir"] = paths.closed_loop_eval_dir
-        self.training_params["log_dir"] = paths.log_dir
-        self.training_params["checkpoints_dir"] = paths.run_dir / "checkpoints"

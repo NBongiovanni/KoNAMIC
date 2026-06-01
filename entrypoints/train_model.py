@@ -26,8 +26,6 @@ def main() -> None:
     # -------------------------------------------------------------------------
     # Runtime setup
     # -------------------------------------------------------------------------
-    # Parse CLI arguments, initialize logging, fix the random seed, and create
-    # the drone model associated with the requested dimension.
     args = parse_learning_args()
     logger = utils.setup_logging()
     utils.set_seed(args.seed)
@@ -42,38 +40,28 @@ def main() -> None:
     # -------------------------------------------------------------------------
     # Paths and configuration
     # -------------------------------------------------------------------------
-    # Build the output paths associated with the current run.
     run_paths = utils.build_run_paths(
         modality=args.modality,
         drone_dim=args.drone_dim,
         run_status="interim",
         stamp_run=run_stamp,
     )
+    dataset_paths = utils.build_dataset_paths(args.drone_dim,str(args.dataset_stamp))
 
-    # Load the base YAML configuration corresponding to the selected modality,
-    # drone dimension, and configuration name.
     run_config = TrainingConfig.load_base_config(
         modality=args.modality,
         drone_dim=args.drone_dim,
     )
 
-    # Build the paths pointing to the dataset used for this run.
-    dataset_paths = utils.build_dataset_paths(
-        drone_dim=args.drone_dim,
-        dataset_stamp=str(args.dataset_stamp),
-    )
 
     # Synchronize shared parameters, apply CLI overrides, and register run paths
     # inside the configuration object before saving the resolved configuration.
     run_config.sync_shared_params()
     run_config.apply_cli_options(args)
-    run_config.define_paths(run_paths)
-
     params = run_config.to_dict()
-    utils.save_yaml(params)
+    utils.save_yaml(params ,run_paths.run_dir)
 
-    # Retrieve the configuration sub-dictionaries used by the different parts
-    # of the training pipeline.
+    # Retrieve the configuration sub-dictionaries
     model_params = run_config.model_params
     training_params = run_config.training_params
     dataset_params = run_config.dataset_params
@@ -82,10 +70,12 @@ def main() -> None:
     # -------------------------------------------------------------------------
     # Model initialization
     # -------------------------------------------------------------------------
-    # Initialize the neural model and its associated training context. Depending
-    # on the modality, this may correspond to a sensor-based or vision-based
-    # Koopman representation.
-    model, training_ctx = init_model(args.modality, model_params, training_params)
+    model, training_ctx = init_model(
+        args.modality,
+        run_paths,
+        model_params,
+        training_params
+    )
 
     # -------------------------------------------------------------------------
     # Sensor/state-input dataset preparation
@@ -119,8 +109,7 @@ def main() -> None:
             dataset_stamp=args.dataset_stamp,
         )
 
-        # Build the visual dataloaders. The visual dataset uses image sequences,
-        # while keeping access to the associated state/input data.
+        # Build the visual dataloaders.
         im_dataset_builder = VisionBuilder(
             dataset_paths,
             len(dataset_params["val_datasets"]),
@@ -142,10 +131,9 @@ def main() -> None:
     # -------------------------------------------------------------------------
     # Training
     # -------------------------------------------------------------------------
-    # Instantiate the trainer with the model, dataloaders, scalers, configuration
-    # parameters, and run directory, then launch the training loop.
     trainer = Trainer(
         modality=args.modality,
+        run_paths=run_paths,
         model_params=model_params,
         control_params=control_params,
         training_params=training_params,
@@ -156,7 +144,6 @@ def main() -> None:
         x_scaler=state_inputs_dataset_builder.x_scaler,
         u_scaler=state_inputs_dataset_builder.u_scaler,
         training_ctx=training_ctx,
-        run_dir=run_paths.run_dir,
     )
     trainer.train_model()
 
