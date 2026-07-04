@@ -1,0 +1,16 @@
+system_name: cartpole
+modality: sensor
+seed: 1
+controller: lqr
+
+simulation:
+  dt: 0.001
+  t_sim: 3.0
+
+splits:
+  train:
+    num_traj: 20
+  val_1:
+    num_traj: 5
+  val_2:
+    num_traj: 5

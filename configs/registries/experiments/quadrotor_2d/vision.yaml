@@ -1,0 +1,37 @@
+model_registry:
+  'bilin_vision_19':
+    stamp_run: bilin_2_2026-02-10_17-03-40
+    epoch: 310
+    run_status: final
+    best_simulations:
+      open_loop:
+        setpoint_tracking: '...'
+        trajectory_tracking: '...'
+      closed_loop:
+        setpoint_tracking: '...'
+        trajectory_tracking: '...'
+    system_name: quadrotor_2d
+  'lin_vision_20':
+    stamp_run: lin_2_2026-02-10_17-03-39
+    epoch: 300
+    run_status: final
+    best_simulations:
+      open_loop:
+        setpoint_tracking: '...'
+        trajectory_tracking: '...'
+      closed_loop:
+        setpoint_tracking: 2026-02-25_17-00-15
+        trajectory_tracking: 2026-02-25_18-54-25
+    system_name: quadrotor_2d
+  'bilin_vision_21':
+    stamp_run: bilin_6_2026-02-16_13-28-57
+    epoch: 300
+    run_status: final
+    best_simulations:
+      open_loop:
+        setpoint_tracking: '...'
+        trajectory_tracking: '...'
+      closed_loop:
+        setpoint_tracking: 2026-02-25_17-22-08
+        trajectory_tracking: 2026-02-25_18-51-28
+    system_name: quadrotor_2d

@@ -1,0 +1,15 @@
+system_name: cartpole
+dt: 0.001
+controller_type: lqr
+
+q_diag:
+  - 5.0       # p
+  - 80.0      # theta
+  - 1.0       # p_dot
+  - 10.0      # theta_dot
+
+r_diag:
+  - 0.1       # force
+
+force_min: -20.0
+force_max: 20.0

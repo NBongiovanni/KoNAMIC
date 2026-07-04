@@ -1,0 +1,23 @@
+system_name: cartpole
+system_type: cartpole
+system_dim: 2
+state_dim: 4
+input_dim: 1
+
+cart_mass: 1.0
+pole_mass: 0.1
+pole_length: 0.5
+gravity: 9.81
+
+state_names:
+- x
+- theta
+- x_dot
+- theta_dot
+input_names:
+- force
+ref_names:
+  - p_ref
+  - theta_ref
+  - p_dot_ref
+  - theta_dot_ref

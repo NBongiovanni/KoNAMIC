@@ -1,0 +1,29 @@
+system_name: quadrotor_2d
+modality: sensor
+controller_type: kmpc
+dt: 0.01
+num_steps_horizon: 50
+constraints:
+  use_inputs_constraints: false
+  force_limits:
+  - 0
+  - 1.2
+  torque_limits:
+  - -1
+  - 1
+cost:
+  mode: position_in_z
+  R:
+  - 0.02
+  - 0.02
+  S:
+  - 0.01
+  - 0.01
+  Q_positions: 2.0
+  P_positions: 2.0
+  Q_other_state: 0.01
+  P_other_state: 0.01
+  Q_latent: 0.000
+  P_latent: 0.000
+
+solver_options_profile: linear_latent_medium

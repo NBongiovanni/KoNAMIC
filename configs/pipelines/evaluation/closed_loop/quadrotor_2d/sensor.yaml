@@ -1,0 +1,13 @@
+system_name: quadrotor_2d
+modality: sensor
+controller_name: kmpc
+controller_variant: position_in_z
+enabled: false
+save_plots: true
+suppress_output: true
+start_epoch: 10
+num_visualized_rollouts: 5
+num_rollouts: 5
+dt: 0.01
+t_sim: 1.0
+scenario_level: stabilisation

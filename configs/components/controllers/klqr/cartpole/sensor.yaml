@@ -1,0 +1,19 @@
+system_name: cartpole
+modality: sensor
+controller_type: klqr
+dt: 0.02
+
+constraints:
+  use_inputs_constraints: true
+  force_limits:
+    - -10.0
+    - 10.0
+
+cost:
+  q_diag:
+    - 5.0
+    - 80.0
+    - 1.0
+    - 10.0
+  r_diag:
+    - 0.1

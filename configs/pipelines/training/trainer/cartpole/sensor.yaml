@@ -1,0 +1,15 @@
+system_name: cartpole
+modality: sensor
+seed: 1
+num_epochs: 800
+checkpoint_every: 10
+optimizer:
+  lr: 0.001
+  l2_reg: 1.0e-05
+lr_decay: 0.996
+loss_weights:
+  y_pred: 10
+  z_pred: 1
+  y_rec: 5
+closed_loop_eval_every: 0
+notes: Placeholder trainer config for a first cartpole sensor baseline.

@@ -1,0 +1,14 @@
+system_name: quadrotor_2d
+modality: vision
+controller_name: kmpc
+controller_variant: null
+enabled: false
+save_plots: true
+suppress_output: true
+start_epoch: 50
+num_visualized_rollouts: 20
+num_rollouts: 20
+dataset_policy: append
+dt: 0.01
+t_sim: 3.0
+scenario_level: aggressive

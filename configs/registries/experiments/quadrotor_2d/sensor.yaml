@@ -1,0 +1,25 @@
+model_registry:
+  'lin_sensor_1':
+    stamp_run: lin_1_2026-07-02_09-21-20
+    epoch: 500
+    run_status: interim
+    best_simulations:
+      open_loop:
+        setpoint_tracking: ...
+        trajectory_tracking: 2026-07-04_10-02-56
+      closed_loop:
+        setpoint_tracking: ...
+        trajectory_tracking: 2026-07-04_10-17-38
+    system_name: quadrotor_2d
+  'bilin_sensor_1':
+    stamp_run: bilin_1_2026-07-02_10-01-31
+    epoch: 500
+    run_status: interim
+    best_simulations:
+      open_loop:
+        setpoint_tracking: ...
+        trajectory_tracking: 2026-07-04_10-04-23
+      closed_loop:
+        setpoint_tracking: ...
+        trajectory_tracking: 2026-07-04_10-16-42
+    system_name: quadrotor_2d

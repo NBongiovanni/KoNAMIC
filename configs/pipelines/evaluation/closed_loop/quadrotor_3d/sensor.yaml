@@ -1,0 +1,16 @@
+system_name: quadrotor_3d
+modality: sensor
+controller_name: kmpc
+controller_variant: null
+enabled: true
+save_plots: null
+suppress_output: true
+start_epoch: 50
+num_visualized_rollouts: 3
+num_rollouts: 20
+dataset_policy: append
+max_num_trajectories: 50
+batch_size: 32
+dt: 0.01
+t_sim: 3.0
+scenario_level: aggressive

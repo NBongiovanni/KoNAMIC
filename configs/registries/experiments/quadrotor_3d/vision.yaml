@@ -1,0 +1,25 @@
+model_registry:
+  '52':
+    model_stamp: lin_2_2026-03-16_10-29-55
+    epoch: 460
+    run_status: final
+    best_simulations:
+      open_loop:
+        setpoint_tracking: 2026-03-16_18-02-44
+        trajectory_tracking: '...'
+      closed_loop:
+        setpoint_tracking: '...'
+        trajectory_tracking: '...'
+    system_name: quadrotor_3d
+  '53':
+    model_stamp: bilin_2_2026-03-16_17-48-46
+    epoch: 760
+    run_status: final
+    best_simulations:
+      open_loop:
+        setpoint_tracking: 2026-03-17_10-12-25
+        trajectory_tracking: '...'
+      closed_loop:
+        setpoint_tracking: '...'
+        trajectory_tracking: '...'
+    system_name: quadrotor_3d

@@ -1,0 +1,25 @@
+profiles:
+  hover: 0.1
+  step_x: 0.1
+  step_y: 0.1
+  step_z: 0.1
+  step_yz: 0.1
+  step_xz: 0.1
+  step_xy: 0.1
+  step_xyz: 0.5
+
+initial_conditions:
+  position_max: 0.5
+  angle_max: 0.0
+  velocity_max: 0.0
+
+references:
+  x_max: 0.5
+  y_max: 0.5
+  z_max: 0.5
+  step_signal:
+    n_segments_min: 2
+    n_segments_max: 3
+  reference_smoothing:
+    time_constant_min: 0.1
+    time_constant_max: 0.5

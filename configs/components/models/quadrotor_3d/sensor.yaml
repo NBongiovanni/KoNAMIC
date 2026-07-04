@@ -1,0 +1,17 @@
+system_name: quadrotor_3d
+modality: sensor
+drone_dim: 3
+z_dynamics:
+  model: linear
+  z_dim: 20
+  u_dim: 4
+  structured_AB: true
+  affine_term: false
+dt: 0.01
+auto_encoder:
+  include_state_in_z: true
+  hidden_dims:
+  - 128
+  - 128
+  num_hidden_layers: 2
+  activation: tanh

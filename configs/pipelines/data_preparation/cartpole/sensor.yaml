@@ -1,0 +1,36 @@
+system_name: cartpole
+modality: sensor
+dataloader:
+  batch_size: 128
+  num_workers: 2
+postprocessing:
+  ds_step: 10
+  smooth_window: 1
+  delay: 0
+train:
+  num_traj_loaded: 20
+  num_steps_loaded: 250
+  num_steps_pred: 25
+val_datasets:
+- split: val_1
+  name: short_horizon
+  num_traj_loaded: 5
+  num_steps_loaded: 250
+  num_steps_pred: 25
+- split: val_2
+  name: long_horizon
+  num_traj_loaded: 5
+  num_steps_loaded: 250
+  num_steps_pred: 25
+scaler:
+  scale_x: true
+  scale_u: true
+  center: true
+  mean_x:
+  - 0
+  - 0
+  - 0
+  - 0
+  mean_u:
+  - 0
+notes: Initial sensor data-preparation config for cartpole.

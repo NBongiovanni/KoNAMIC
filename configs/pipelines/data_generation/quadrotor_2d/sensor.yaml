@@ -1,0 +1,17 @@
+system_name: quadrotor_2d
+modality: sensor
+controller: pid
+seed: 1
+
+simulation:
+  dt: 0.001
+  t_sim: 3.1
+scenario_level: aggressive
+
+splits:
+  train:
+    num_traj: 3000
+  val_1:
+    num_traj: 200
+  val_2:
+    num_traj: 200

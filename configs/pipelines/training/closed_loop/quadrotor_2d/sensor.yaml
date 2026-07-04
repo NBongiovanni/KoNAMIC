@@ -1,0 +1,16 @@
+system_name: quadrotor_2d
+modality: sensor
+controller_name: klqr
+controller_variant: null
+enabled: false
+frequency: 5
+replay_start_epoch: 0
+num_rollouts: 20
+num_steps_simulation: 100
+dataset_policy: append
+closed_loop_every: 1
+max_num_trajectories: 50
+batch_size: 32
+dt: 0.01
+t_sim: 3
+scenario_level: aggressive

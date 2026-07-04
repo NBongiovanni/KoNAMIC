@@ -1,0 +1,20 @@
+system_name: cartpole
+modality: sensor
+state_dim: 4
+input_dim: 1
+z_dynamics:
+  model: linear
+  z_dim: 8
+  u_dim: 1
+  structured_AB: false
+  affine_term: false
+dt: 0.02
+auto_encoder:
+  include_state_in_z: true
+  hidden_dims:
+  - 64
+  - 64
+  num_hidden_layers: 2
+  activation: tanh
+notes: Initial lightweight sensor model for cartpole. Tune z_dim, dt and structured_AB
+  after the first baseline.

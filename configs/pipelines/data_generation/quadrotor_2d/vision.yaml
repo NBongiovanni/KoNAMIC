@@ -1,0 +1,5 @@
+system_name: quadrotor_2d
+modality: vision
+resolution: 512
+drone_dim: 2
+render_stride: 10

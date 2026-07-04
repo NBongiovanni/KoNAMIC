@@ -1,0 +1,17 @@
+system_name: quadrotor_2d
+modality: sensor
+drone_dim: 2
+z_dynamics:
+  model: bilinear
+  z_dim: 12
+  u_dim: 4
+  structured_AB: true
+  affine_term: true
+dt: 0.01
+auto_encoder:
+  include_state_in_z: true
+  hidden_dims:
+  - 64
+  - 64
+  num_hidden_layers: 2
+  activation: tanh

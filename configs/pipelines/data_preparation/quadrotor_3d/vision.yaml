@@ -1,0 +1,52 @@
+system_name: quadrotor_3d
+modality: vision
+im_size: 512
+drone_dim: 3
+dataset_version: 31
+dt: 0.02
+batch_size: 32
+resolution: 128
+downsample_factor: 5
+train:
+  num_traj_loaded: 20
+  num_steps_loaded: 102
+  num_steps_pred: 50
+val_datasets:
+- split: val_1
+  name: short_horizon
+  num_traj_loaded: 20
+  num_steps_loaded: 102
+  num_steps_pred: 50
+- split: val_2
+  name: long_horizon
+  num_traj_loaded: 20
+  num_steps_loaded: 102
+  num_steps_pred: 50
+scaler:
+  scale_x: false
+  scale_u: true
+  center: true
+  mean_x:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  mean_u:
+  - 0.28
+  - 0
+  - 0
+  - 0
+num_workers: 2
+delay: 2
+postprocessing:
+  ds_step: 5
+  smooth_window: 1
+  delay: 2

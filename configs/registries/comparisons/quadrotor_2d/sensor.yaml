@@ -1,0 +1,14 @@
+comparisons:
+  linear_vs_bilinear_open_loop:
+    eval_type: open_loop
+    trajectory_type: trajectory_tracking
+    experiments:
+      - lin_sensor_1
+      - bilin_sensor_1
+
+  linear_vs_bilinear_closed_loop:
+    eval_type: closed_loop
+    trajectory_type: trajectory_tracking
+    experiments:
+      - lin_sensor_1
+      - bilin_sensor_1

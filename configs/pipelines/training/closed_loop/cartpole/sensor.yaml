@@ -1,0 +1,13 @@
+system_name: cartpole
+modality: sensor
+controller_name: kmpc
+controller_variant: null
+enabled: true
+frequency: 5
+start_epoch: 50
+num_rollouts: 20
+num_steps_simulation: 200
+dataset_policy: append
+closed_loop_every: 1
+max_num_trajectories: 50
+batch_size: 32

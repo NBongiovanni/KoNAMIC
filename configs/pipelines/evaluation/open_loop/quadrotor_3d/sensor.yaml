@@ -1,0 +1,6 @@
+system_name: quadrotor_3d
+modality: sensor
+plot_every: 10
+num_visualized_rollouts: 3
+num_steps_simulation: 100
+save_plots: true

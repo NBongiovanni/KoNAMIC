@@ -1,0 +1,6 @@
+system_name: cartpole
+modality: sensor
+plot_every: 10
+num_visualized_rollouts: 3
+num_steps_simulation: 200
+save_plots: true

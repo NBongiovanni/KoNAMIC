@@ -1,0 +1,21 @@
+system_family: cartpole
+open_loop:
+  cartpole_sensor_baseline:
+    num_traj: 10
+    modality: sensor
+    trajectory_type: setpoint_tracking
+    run_status: interim
+    task: open_loop
+    models: []
+closed_loop:
+  cartpole_sensor_vs_nominal:
+    modality: sensor
+    trajectory_type: setpoint_tracking
+    run_status: interim
+    task: control
+    comparison_name: cartpole_sensor_vs_nominal
+    num_columns: 2
+    models: []
+    nominal_controller:
+      enabled: true
+      label: Nominal MPC

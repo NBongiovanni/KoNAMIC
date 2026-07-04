@@ -1,0 +1,38 @@
+system_type: quadrotor
+system_dim: 3
+mass: 0.028
+gravity: 9.81
+arm_length: 0.046
+inertia:
+- 1.66e-05
+- 1.66e-05
+- 2.93e-05
+system_name: quadrotor_3d
+state_dim: 12
+input_dim: 4
+
+state_names:
+- x
+- y
+- z
+- phi
+- theta
+- psi
+- x_dot
+- y_dot
+- z_dot
+- p
+- q
+- r
+input_names:
+- force
+- tau_phi
+- tau_theta
+- tau_psi
+ref_names:
+- x_ref
+- y_ref
+- z_ref
+- phi_cmd
+- theta_cmd
+- psi_cmd

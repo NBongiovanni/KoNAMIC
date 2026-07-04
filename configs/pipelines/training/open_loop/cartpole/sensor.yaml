@@ -1,0 +1,4 @@
+system_name: cartpole
+modality: sensor
+enabled: true
+frequency: 1

@@ -1,0 +1,14 @@
+profiles:
+  balance: 0.5
+  step_p: 0.5
+
+initial_conditions:
+  p_max: 0.5
+  theta_max: 0.1
+  p_dot_max: 0.0
+  theta_dot_max: 0.0
+
+references:
+  p_max: 0.5
+  tau_min: 0.2
+  tau_max: 0.5

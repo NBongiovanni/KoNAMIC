@@ -1,14 +1,29 @@
 #!/usr/bin/env python
-import joblib
+from typing import cast
 
 import matplotlib
 matplotlib.use("Agg")
 
-from KoNAMIC.core import utils
-from KoNAMIC.core.drone import DroneSpec
-from KoNAMIC.core.models import init_model
-from KoNAMIC.pipelines.data_preparation import VisionBuilder, SensorBuilder, prepare_vision_memmap
-from KoNAMIC.pipelines.model_learning import Trainer, TrainingConfig, parse_learning_args
+from KoNAMIC import paths, utils, config
+from KoNAMIC.core.systems import create_system
+from KoNAMIC.core.models import build_model
+from KoNAMIC.core.plants import build_plant
+from KoNAMIC.core.scenarios import build_scenario_generator, load_scenario_gen_config
+from KoNAMIC.core.scaling import DatasetScalers
+from KoNAMIC.pipelines.data_preparation import (
+    VisionBuilder,
+    VisionPreparationConfig,
+    SensorBuilder,
+    prepare_vision_dataset,
+)
+from KoNAMIC.pipelines.model_learning import (
+    Trainer,
+    TrainingPipelineConfig,
+    parse_learning_args,
+    TrainingEvaluator,
+    build_training_context,
+    save_effective_run_config,
+)
 
 
 def main() -> None:
@@ -22,128 +37,145 @@ def main() -> None:
     - initialize the trainer,
     - launch training.
     """
-
     # -------------------------------------------------------------------------
     # Runtime setup
     # -------------------------------------------------------------------------
     args = parse_learning_args()
+    modality = config.Modality(args.modality)
     logger = utils.setup_logging()
     utils.set_seed(args.seed)
 
-    project_root = utils.find_project_root()
-    drone_config = f"configs/components/drones/{args.drone_dim}d_quadrotor.yaml"
-    drone = DroneSpec.from_yaml(project_root / drone_config)
-
-    # Create a unique identifier for this training run.
-    run_stamp = utils.create_run_stamp(args.dynamics, args.id, logger)
+    system_spec = create_system(args.system_name)
+    run_stamp = paths.create_run_stamp(args.latent_dynamics, args.id, logger)
 
     # -------------------------------------------------------------------------
     # Paths and configuration
     # -------------------------------------------------------------------------
-    run_paths = utils.build_run_paths(
-        modality=args.modality,
-        drone_dim=args.drone_dim,
+    run_paths = paths.build_run_paths(
+        modality=modality.key,
+        system_name=args.system_name,
         run_status="interim",
         stamp_run=run_stamp,
     )
-    dataset_paths = utils.build_dataset_paths(args.drone_dim,str(args.dataset_stamp))
+    dataset_paths = paths.build_dataset_paths(args.system_name, str(args.dataset_stamp))
 
-    run_config = TrainingConfig.load_base_config(
-        modality=args.modality,
-        drone_dim=args.drone_dim,
+    controller_variant = args.controller_variant
+    if controller_variant is None and args.state_in_z:
+        controller_variant = "position_in_z"
+
+    run_config = TrainingPipelineConfig.load_default(
+        system_name=args.system_name,
+        modality=modality,
+        controller_variant=controller_variant,
+    )
+    # Apply user overrides before synchronizing dimensions and derived settings.
+    run_config.apply_cli_options(args)
+    run_config.sync_shared_params(system_spec)
+    run_config.resolve_derived_params()
+    save_effective_run_config(
+        run_config=run_config,
+        run_paths=run_paths,
+        args=args,
+        run_stamp=run_stamp,
+        run_status="interim",
     )
 
-
-    # Synchronize shared parameters, apply CLI overrides, and register run paths
-    # inside the configuration object before saving the resolved configuration.
-    run_config.sync_shared_params()
-    run_config.apply_cli_options(args)
-    params = run_config.to_dict()
-    utils.save_yaml(params ,run_paths.run_dir)
-
-    # Retrieve the configuration sub-dictionaries
-    model_params = run_config.model_params
-    training_params = run_config.training_params
-    dataset_params = run_config.dataset_params
-    control_params = run_config.control_params
+    scenario_level, closed_loop_dt, closed_loop_t_sim = (
+        run_config.closed_loop_training.require_scenario_generation_params()
+    )
+    scenario_gen_config = load_scenario_gen_config(
+        system_spec.system_name,
+        scenario_level,
+        closed_loop_dt,
+        closed_loop_t_sim,
+    )
+    scenario_generator = build_scenario_generator(
+        system_spec=system_spec,
+        cfg=scenario_gen_config,
+        seed=run_config.trainer.seed,
+    )
 
     # -------------------------------------------------------------------------
     # Model initialization
     # -------------------------------------------------------------------------
-    model, training_ctx = init_model(
-        args.modality,
-        run_paths,
-        model_params,
-        training_params
+    model = build_model(modality, run_config.model)
+    training_ctx = build_training_context(
+        modality=modality,
+        run_paths=run_paths,
+        model=model,
+        trainer_config=run_config.trainer,
     )
 
     # -------------------------------------------------------------------------
     # Sensor/state-input dataset preparation
     # -------------------------------------------------------------------------
-    # Sensor data are always processed first. In vision mode, they are also used
-    # to provide the state/input information associated with image trajectories.
-    state_inputs_dataset_builder = SensorBuilder(
+    sensor_dataset_builder = SensorBuilder(
         dataset_paths,
-        dataset_params,
-        args.drone_dim,
+        run_config.data_preparation,
+        system_spec.system_dim,
+        args.seed,
     )
-    processed_states_inputs = state_inputs_dataset_builder.processed
+    processed_states_inputs = sensor_dataset_builder.processed
 
-    # Save the scalers used to normalize inputs and states. They will be needed
-    # later for evaluation, simulation, or control.
-    u_scaler = state_inputs_dataset_builder.u_scaler
-    joblib.dump(u_scaler, run_paths.run_dir / "u_scaler.pkl")
-
-    x_scaler = state_inputs_dataset_builder.x_scaler
-    joblib.dump(x_scaler, run_paths.run_dir / "x_scaler.pkl")
+    scalers = DatasetScalers(
+        x=sensor_dataset_builder.x_scaler, u=sensor_dataset_builder.u_scaler
+    )
+    scalers.save(run_paths.run_dir)
 
     # -------------------------------------------------------------------------
     # Dataset loader selection
     # -------------------------------------------------------------------------
-    if args.modality == "vision":
+    if modality is config.Modality.VISION:
+        vision_preparation_config = cast(
+            VisionPreparationConfig,
+            run_config.data_preparation,
+        )
         # Prepare the image memmap files before constructing the vision loaders.
-        # This avoids loading all image trajectories directly into memory.
-        prepare_vision_memmap(
-            num_traj=dataset_params["train"]["num_traj_loaded"],
-            dataset_params=dataset_params,
+        prepare_vision_dataset(
+            data_preparation_config=vision_preparation_config,
             dataset_stamp=args.dataset_stamp,
         )
 
         # Build the visual dataloaders.
         im_dataset_builder = VisionBuilder(
-            dataset_paths,
-            len(dataset_params["val_datasets"]),
-            dataset_params["resolution"],
-            dataset_params["dataloader"]["batch_size"],
-            processed_states_inputs,
-            dataset_params["dataloader"]["num_workers"],
-            drone,
-            args.drone_dim,
-            args.seed,
+            dataset_paths=dataset_paths,
+            config=vision_preparation_config,
+            processed_dataset=processed_states_inputs,
+            system=system_spec,
+            seed=args.seed,
         )
-        dataloader = im_dataset_builder.pipeline()
-
+        data_loaders = im_dataset_builder.pipeline()
     else:
-        # In sensor mode, training directly uses the dataloaders produced by the
-        # sensor dataset builder.
-        dataloader = state_inputs_dataset_builder.data_loader
+        data_loaders = sensor_dataset_builder.data_loaders
 
     # -------------------------------------------------------------------------
     # Training
     # -------------------------------------------------------------------------
-    trainer = Trainer(
-        modality=args.modality,
+    evaluator = TrainingEvaluator(
+        modality=modality,
+        system_spec=system_spec,
+        run_config=run_config,
         run_paths=run_paths,
-        model_params=model_params,
-        control_params=control_params,
-        training_params=training_params,
-        drone=drone,
-        model=model,
-        data_loaders=dataloader,
-        prediction_horizon=run_config.prediction_horizon,
-        x_scaler=state_inputs_dataset_builder.x_scaler,
-        u_scaler=state_inputs_dataset_builder.u_scaler,
+        koop_model=model,
+        data_loaders=data_loaders,
+        scalers=scalers,
+        scenario_generator=scenario_generator,
+        plant=build_plant(
+            system_specs=system_spec,
+            dt=run_config.closed_loop_eval.dt,
+        ),
+    )
+
+    trainer = Trainer(
+        modality=modality,
+        system_spec=system_spec,
+        run_config=run_config,
+        run_paths=run_paths,
+        koop_model=model,
         training_ctx=training_ctx,
+        data_loaders=data_loaders,
+        scalers=scalers,
+        model_evaluator=evaluator,
     )
     trainer.train_model()
 

@@ -1,0 +1,33 @@
+system_name: quadrotor_3d
+modality: sensor
+controller_type: klqr
+dt: 0.01
+
+constraints:
+  use_inputs_constraints: true
+  force_limits:
+    - 0.05
+    - 0.55
+  torque_limits:
+    - -0.001
+    - 0.001
+
+cost:
+  q_diag:
+    - 40.0
+    - 40.0
+    - 40.0
+    - 300.0
+    - 300.0
+    - 60.0
+    - 15.0
+    - 15.0
+    - 8.0
+    - 40.0
+    - 40.0
+    - 20.0
+  r_diag:
+    - 1.0
+    - 0.1
+    - 0.1
+    - 0.1

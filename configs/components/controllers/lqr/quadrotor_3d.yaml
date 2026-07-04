@@ -1,0 +1,29 @@
+system_name: quadrotor_3d
+dt: 0.001
+controller_type: lqr
+
+q_diag:
+  - 40.0      # x
+  - 40.0      # y
+  - 40.0      # z
+  - 300.0     # phi
+  - 300.0     # theta
+  - 60.0      # psi
+  - 15.0      # x_dot
+  - 15.0      # y_dot
+  - 8.0       # z_dot
+  - 40.0      # p
+  - 40.0      # q
+  - 20.0      # r
+
+r_diag:
+  - 1.0       # thrust variation around hover
+  - 0.1       # Mx
+  - 0.1       # My
+  - 0.1       # Mz
+
+thrust_min: 0.05
+thrust_max: 0.55
+
+moment_max: 0.001
+max_moment_rates: 0.1

@@ -21,14 +21,39 @@ dependencies = [
   "scikit-learn",
   "matplotlib",
   "casadi",
-  "torchinfo"
+  "torchinfo",
+  "wandb",
+  "joblib",
+  "opencv-python",
 ]
+
+[tool.pytest.ini_options]
+norecursedirs = [
+  "datasets",
+  "outputs",
+  "runs",
+  ".git",
+  ".venv",
+]
+
+[tool.ruff]
+exclude = [
+  "datasets",
+  "outputs",
+  "runs",
+  ".git",
+  ".venv",
+]
+
+[tool.mypy]
+exclude = "(datasets|outputs|runs)/"
 
 [project.urls]
 Homepage = "https://github.com/NBongiovanni/KoNAMIC.git"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+exclude = ["datasets*", "outputs*", "runs*"]
 
 [tool.setuptools.package-data]
 "*" = ["*"]

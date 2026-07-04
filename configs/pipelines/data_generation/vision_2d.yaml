@@ -1,4 +1,0 @@
-resolution: 512
-drone_dim: 2
-render_stride: 1
-sensor_generation_config: "configs/data_generation/sensor_2d.yaml"

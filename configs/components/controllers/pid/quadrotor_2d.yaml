@@ -1,0 +1,29 @@
+system_name: quadrotor_2d
+dt: 0.001
+modality: sensor
+controller_type: pid
+tracked_state_indices:
+- 0
+- 1
+- 2
+kp_pos:
+- 18
+- 18
+ki_pos:
+- 0
+- 0
+kd_pos:
+- 10
+- 10
+kp_att: 33
+ki_att: 0.0
+kd_att: 10
+att_cmd_alpha: 1
+moment_max: 0.0008
+max_moment_rates: 0.05
+acc_xy_max: 1.5
+thrust_min: 0.0
+thrust_max: 0.55
+phi_ref_max: 15.0
+theta_ref_max: 15.0
+deriv_filter_N: 80.0

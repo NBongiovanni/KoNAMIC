@@ -1,0 +1,138 @@
+system_family: quadrotor
+open_loop:
+  sensor_state_inclusion_dt02:
+    num_traj: 10
+    modality: sensor
+    trajectory_type: setpoint_tracking
+    run_status: final
+    task: open_loop
+    models:
+    - case_id: 9
+      label: $\mathbf{x} \notin \mathbf{z}$
+      color: tab:orange
+    - case_id: 10
+      label: $\mathbf{x} \in \mathbf{z}$
+      color: tab:blue
+  sensor_linear_vs_bilinear_final:
+    num_traj: 10
+    modality: sensor
+    trajectory_type: setpoint_tracking
+    run_status: final
+    task: open_loop
+    models:
+    - case_id: 5
+      label: Bilinear
+      color: tab:orange
+    - case_id: 6
+      label: Linear
+      color: tab:blue
+  sensor_state_inclusion_v2:
+    num_traj: 30
+    modality: sensor
+    trajectory_type: setpoint_tracking
+    run_status: interim
+    task: open_loop
+    models:
+    - case_id: 11
+      label: $\mathbf{x} \notin \mathbf{z}$
+      color: tab:orange
+    - case_id: 12
+      label: $\mathbf{x} \in \mathbf{z}$
+      color: tab:blue
+    vision_linear_vs_bilinear_final:
+      num_traj: 10
+      modality: vision
+      trajectory_type: setpoint_tracking
+      run_status: final
+      task: open_loop
+      models:
+      - case_id: 5
+        label: Bilinear
+        color: tab:orange
+      - case_id: 6
+        label: Linear
+        color: tab:blue
+closed_loop:
+  sensor_bilinear_vs_pid:
+    modality: sensor
+    trajectory_type: setpoint_tracking
+    run_status: final
+    task: control
+    comparison_name: sensor_bilinear_vs_pid
+    num_columns: 2
+    models:
+    - case_id: 5
+      label: Bilinear
+      color: tab:orange
+    pid:
+      enabled: true
+      label: PID
+      color: tab:blue
+      results_path: pid/1
+  sensor_linear_vs_bilinear_plus_pid:
+    modality: sensor
+    trajectory_type: setpoint_tracking
+    run_status: final
+    task: control
+    comparison_name: sensor_linear_vs_bilinear_plus_pid
+    num_columns: 2
+    models:
+    - case_id: 5
+      label: Bilinear
+      color: tab:orange
+    - case_id: 6
+      label: Linear
+      color: tab:blue
+    pid:
+      enabled: true
+      label: PID
+      color: tab:blue
+      results_path: pid/1
+  sensor_linear_vs_bilinear:
+    modality: sensor
+    trajectory_type: setpoint_tracking
+    run_status: final
+    task: control
+    comparison_name: sensor_linear_vs_bilinear
+    num_columns: 2
+    models:
+    - case_id: 5
+      label: Bilinear
+      color: tab:orange
+    - case_id: 6
+      label: Linear
+      color: tab:blue
+    pid:
+      enabled: false
+  structured_vs_unstructured:
+    modality: sensor
+    trajectory_type: setpoint_tracking
+    run_status: final
+    task: control
+    comparison_name: structured_vs_unstructured
+    num_columns: 2
+    models:
+    - case_id: 5
+      label: Bilinear
+      color: tab:orange
+    - case_id: 6
+      label: Linear
+      color: tab:blue
+    pid:
+      enabled: false
+  vision_linear_vs_bilinear:
+    modality: vision
+    trajectory_type: setpoint_tracking
+    run_status: final
+    task: control
+    comparison_name: vision_linear_vs_bilinear
+    num_columns: 2
+    models:
+    - case_id: 21
+      label: Bilinear
+      color: tab:orange
+    - case_id: 20
+      label: Linear
+      color: tab:blue
+    pid:
+      enabled: false

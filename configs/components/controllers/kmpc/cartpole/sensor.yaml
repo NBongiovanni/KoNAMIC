@@ -1,0 +1,55 @@
+system_name: cartpole
+modality: sensor
+controller_type: knmpc
+dt: 0.02
+num_steps_simulation: 200
+num_steps_horizon: 40
+x_init:
+  0:
+    value: 0
+    rand: false
+    min: -0.2
+    max: 0.2
+  1:
+    value: 0
+    rand: false
+    min: -0.2
+    max: 0.2
+  2:
+    value: 0
+    rand: false
+  3:
+    value: 0
+    rand: false
+num_simulations: 1
+plot: true
+save_images: false
+use_nominal_plant: false
+control_type: mpc
+constraints:
+  use_inputs_constraints: true
+  force_limits:
+  - -10.0
+  - 10.0
+x_ref:
+  specs:
+    0:
+      type: constant
+      value: 0.0
+      rand: false
+    1:
+      type: constant
+      value: 0.0
+      rand: false
+cost:
+  mode: structured_latent
+  R:
+  - 0.01
+  S:
+  - 0.05
+  Q_positions: 2
+  Q_velocities: 1
+  P_positions: 5
+  P_velocities: 1
+solver_options_profile: bilinear_latent_medium
+notes: Placeholder cartpole MPC config; adapt cost dimensions to your MPC implementation.

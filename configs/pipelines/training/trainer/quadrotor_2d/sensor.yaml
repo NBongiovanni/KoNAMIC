@@ -1,0 +1,15 @@
+system_name: quadrotor_2d
+seed: 1
+modality: sensor
+closed_loop_eval_every: 10
+num_epochs: 1400
+checkpoint_every: 10
+loss_weights:
+  y_pred: 1
+  z_pred: 1
+  y_rec: 10
+optimizer:
+  l2_reg: 1.0e-05
+  lr: 0.0012
+lr_decay: 0.996
+grad_clip_max_norm: 1

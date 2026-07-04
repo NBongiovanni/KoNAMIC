@@ -1,0 +1,27 @@
+system_type: quadrotor
+system_dim: 2
+mass: 0.028
+gravity: 9.81
+arm_length: 0.046
+inertia:
+- 1.66e-05
+- 1.66e-05
+- 2.93e-05
+system_name: quadrotor_2d
+state_dim: 6
+input_dim: 2
+
+state_names:
+- y
+- z
+- phi
+- y_dot
+- z_dot
+- phi_dot
+input_names:
+- force
+- torque
+ref_names:
+- y_ref
+- z_ref
+- phi_cmd

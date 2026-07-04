@@ -1,0 +1,6 @@
+nlp_solver_type: SQP_RTI
+qp_solver_iter_max: 200
+qp_tol: 1.0e-10
+qp_warm_start: true
+regularization: 1.0e-09
+print_level: 0
