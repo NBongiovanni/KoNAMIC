@@ -1,36 +1,59 @@
 import argparse
 
 
-def build_dataset_generation_arg_parser() -> argparse.ArgumentParser:
+def build_sensor_dataset_generation_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Generate a data_generation from simulated drone trajectories "
                     "and optional rendered vision data_generation."
     )
 
     parser.add_argument(
-        "--modality",
+        "--controller",
         type=str,
-        choices=["sensor", "vision"],
+        choices=["pid", "lqr"],
         required=True,
-        help="Dataset modality to generate.",
     )
 
     parser.add_argument(
-        "--drone-dim",
-        type=int,
-        help="Drone dimension, e.g. 2 for planar quadrotor.",
-    )
-
-
-    parser.add_argument(
-        "--data_generation-stamp",
+        "--system-name",
         type=str,
-        required=False,
-        help="Dataset version name. If omitted, a timestamp may be used.",
+        required=True,
+    )
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        required=True,
     )
 
     return parser
 
 
-def parse_dataset_generation_args() -> argparse.Namespace:
-    return build_dataset_generation_arg_parser().parse_args()
+def build_vision_dataset_generation_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--system-name",
+        type=str,
+        required=True,
+    )
+    parser.add_argument(
+        "--dataset-stamp",
+        type=str,
+        required=True,
+    )
+    parser.add_argument(
+        "--system-dim",
+        type=int,
+        required=True,
+    )
+
+    return parser
+
+
+def parse_sensor_dataset_generation_args() -> argparse.Namespace:
+    return build_sensor_dataset_generation_arg_parser().parse_args()
+
+
+def parse_vision_dataset_generation_args() -> argparse.Namespace:
+    return build_vision_dataset_generation_arg_parser().parse_args()

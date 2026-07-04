@@ -1,43 +1,106 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from typing import Sequence
 
 from matplotlib.axes import Axes
-from matplotlib.lines import Line2D
 import numpy as np
 
-from KoNAMIC.viz.style import GT_COLOR
+from KoNAMIC.viz.style import GT_COLOR, COLORS
+
+
+@dataclass(frozen=True)
+class InputPlotGroup:
+    indices: tuple[int, ...]
+    ylabel: str
+    legend_labels: tuple[str, ...] | None = None
+    linestyles: tuple[str, ...] | None = None
 
 
 def plot_x(
     axes: Sequence[Axes],
     time: np.ndarray,
     labels: list[str],
-    x: np.ndarray,
-    x_gt: np.ndarray,
+    x_main: np.ndarray,
+    x_other: np.ndarray | None = None,
     show_legend: bool = True,
-    label_x: str = "Predicted trajectory",
-    label_gt: str = "True trajectory"
+    label_main: str = "Closed-loop",
+    label_other: str = "Reference",
+    main_linestyle: str = "-",
+    other_linestyle: str = "--",
+    main_color=COLORS[0],
+    other_color=GT_COLOR,
 ) -> None:
     """
-    Trace l'état réel et prédit.
-    Convention :
-      - len(axes) == nombre de dimensions à tracer
-      - x, x_gt ont la forme (T, n_dim) avec n_dim == len(axes)
+    Plot one or two state trajectories.
+
+    This primitive is intentionally system-agnostic.
+
+    Convention:
+      - len(axes) == number of dimensions to plot
+      - x_main has shape (T, n_dim)
+      - x_other, if provided, has shape (T, n_dim)
+      - n_dim == len(axes)
+
+    Typical usages:
+      - open-loop:
+          x_main = true trajectory
+          x_other = predicted trajectory
+
+      - closed-loop:
+          x_main = reference or true trajectory
+          x_other = controlled trajectory
+
+      - dataset diagnostics:
+          x_main = state trajectory
+          x_other = reference trajectory
     """
     n_dim = len(axes)
 
-    assert x.shape[1] == n_dim
-    assert x_gt.shape[1] == n_dim
-    assert len(labels) == n_dim
+    if x_main.ndim != 2:
+        raise ValueError(f"x_main must be 2D, got shape {x_main.shape}.")
+
+    if x_main.shape[1] != n_dim:
+        raise ValueError(
+            f"x_main.shape[1] must be {n_dim}, got {x_main.shape[1]}."
+        )
+
+    if len(labels) != n_dim:
+        raise ValueError(f"len(labels) must be {n_dim}, got {len(labels)}.")
+
+    if x_other is not None:
+        if x_other.ndim != 2:
+            raise ValueError(f"x_other must be 2D, got shape {x_other.shape}.")
+
+        if x_other.shape[1] != n_dim:
+            raise ValueError(
+                f"x_other.shape[1] must be {n_dim}, got {x_other.shape[1]}."
+            )
+
+        if x_other.shape[0] != x_main.shape[0]:
+            raise ValueError(
+                f"x_main and x_other must have the same number of time steps, "
+                f"got {x_main.shape[0]} and {x_other.shape[0]}."
+            )
 
     for i, ax in enumerate(axes):
         ax.plot(
             time[1:],
-            x_gt[1:, i],
-            color=GT_COLOR,
-            linestyle = "--",
-            label=label_gt
+            x_main[1:, i],
+            color=main_color,
+            linestyle=main_linestyle,
+            label=label_main,
         )
-        ax.plot(time[1:], x[1:, i], label=label_x)
+
+        if x_other is not None:
+            ax.plot(
+                time[1:],
+                x_other[1:, i],
+                color=other_color,
+                linestyle=other_linestyle,
+                label=label_other,
+            )
+
         ax.set_ylabel(labels[i])
         ax.tick_params(labelbottom=False)
 
@@ -51,31 +114,36 @@ def plot_x_gt(
     labels: list[str],
     x_gt: np.ndarray,
     show_legend: bool = True,
-    label_gt: str = "True trajectory"
+    label_gt: str = "True trajectory",
 ) -> None:
     """
-    Trace l'état réel et prédit.
-    Convention :
-      - len(axes) == nombre de dimensions à tracer
-      - x, x_gt ont la forme (T, n_dim) avec n_dim == len(axes)
+    Plot true states.
+
+    Convention:
+      - len(axes) == number of dimensions to plot
+      - x_gt has shape (T, n_dim)
+      - n_dim == len(axes)
     """
     n_dim = len(axes)
 
-    assert x_gt.shape[1] == n_dim
-    assert len(labels) == n_dim
+    if x_gt.shape[1] != n_dim:
+        raise ValueError(f"x_gt.shape[1] must be {n_dim}, got {x_gt.shape[1]}.")
+
+    if len(labels) != n_dim:
+        raise ValueError(f"len(labels) must be {n_dim}, got {len(labels)}.")
 
     for i, ax in enumerate(axes):
         ax.plot(
             time,
             x_gt[:, i],
             color=GT_COLOR,
-            linestyle = "--",
-            label=label_gt
+            linestyle="--",
+            label=label_gt,
         )
         ax.set_ylabel(labels[i])
         ax.tick_params(labelbottom=False)
+        ax.grid(True, which="major", axis="both", alpha=0.25)
 
-    #axes[-1].set_xlabel("Time [s]")
     if show_legend:
         axes[0].legend(loc="upper right", fontsize=5)
 
@@ -84,82 +152,117 @@ def plot_u(
     axes: Sequence[Axes],
     time: np.ndarray,
     u_traj: np.ndarray,
-    labels: list,
-    drone_dim: int,
-    *,
-    grouped_ylabel: str = r"Moments [N.m]",
-    group_legend_labels: Sequence[str] = (r"$\tau_1$", r"$\tau_2$", r"$\tau_3$"),
+    input_groups: Sequence[InputPlotGroup],
 ) -> None:
-    if drone_dim == 2:
-        plot_u_2d(
-            axes,
-            time,
-            u_traj,
-            labels,
-        )
-    elif drone_dim == 3:
-        plot_u_3d(
-            axes,
-            time,
-            u_traj,
-            labels,
-            grouped_ylabel=grouped_ylabel,
-            group_legend_labels=group_legend_labels,
-        )
-    else:
-        raise ValueError(f"Unsupported drone_dim. Expected 2 or 3, got {drone_dim}.")
+    """
+    Plot control inputs using generic input groups.
 
+    Each InputPlotGroup corresponds to one axis.
 
-def plot_u_2d(
-    axes: Sequence[Axes],
-    time: np.ndarray,
-    u_traj: np.ndarray,
-    labels: list
-) -> None:
-    for dim in range(2):
-        axes[dim].plot(time, u_traj[:, dim])
-        axes[dim].set_ylabel(labels[dim])
+    Examples:
+      - CartPole:
+          [InputPlotGroup(indices=(0,), ylabel="force [N]")]
+      - Quadrotor 2D:
+          [
+              InputPlotGroup(indices=(0,), ylabel="F [N]"),
+              InputPlotGroup(indices=(1,), ylabel=r"$\\tau$ [N.m]"),
+          ]
+      - Quadrotor 3D:
+          [
+              InputPlotGroup(indices=(0,), ylabel="F [N]"),
+              InputPlotGroup(
+                  indices=(1, 2, 3),
+                  ylabel=r"$\\tau$ [N.m]",
+                  legend_labels=(r"$\\tau_x$", r"$\\tau_y$", r"$\\tau_z$"),
+              ),
+          ]
+    """
+    if len(axes) != len(input_groups):
+        raise ValueError(
+            f"Expected one axis per input group: "
+            f"len(axes)={len(axes)}, len(input_groups)={len(input_groups)}."
+        )
+
+    if u_traj.ndim != 2:
+        raise ValueError(f"u_traj must be 2D, got shape {u_traj.shape}.")
+
+    u_dim = u_traj.shape[1]
+
+    for ax, group in zip(axes, input_groups):
+        _plot_input_group(
+            ax=ax,
+            time=time,
+            u_traj=u_traj,
+            group=group,
+            u_dim=u_dim,
+        )
+
     axes[-1].set_xlabel("Time [s]")
 
 
-def plot_u_3d(
-    axes: Sequence[Axes],
+def _plot_input_group(
+    ax: Axes,
     time: np.ndarray,
     u_traj: np.ndarray,
-    labels: Sequence[str],
-    *,
-    start_idx: int = 0,
-    grouped_ylabel: str = r"$\tau$ [N.m]",
-    group_legend_labels: Sequence[str] = (r"$\tau_1$", r"$\tau_2$", r"$\tau_3$"),
-)-> None:
+    group: InputPlotGroup,
+    u_dim: int,
+) -> None:
+    if len(group.indices) == 0:
+        raise ValueError("InputPlotGroup.indices must contain at least one index.")
 
-    u_dim = int(u_traj.shape[1])
-    assert u_dim == 4, f"plot_u_3d expects u_dim=4, got {u_dim}"
-    assert len(labels) >= 4
+    for idx in group.indices:
+        if idx < 0 or idx >= u_dim:
+            raise ValueError(
+                f"Input index {idx} is out of bounds for u_dim={u_dim}."
+            )
 
-    u_axes = axes[start_idx:start_idx + 2]
-    assert len(u_axes) == 2, "Need 2 axes for u_dim=4 (1 + grouped last 3)"
+    if group.legend_labels is not None and len(group.legend_labels) != len(group.indices):
+        raise ValueError(
+            f"legend_labels must have length {len(group.indices)}, "
+            f"got {len(group.legend_labels)}."
+        )
 
-    ax0, axM = u_axes
-    styles = ["-", "--", ":"]
+    linestyles = _get_linestyles(group)
 
-    # Premier input seul
-    ax0.plot(time[:-1], u_traj[:, 0])
-    ax0.set_ylabel(labels[0])
+    for k, input_idx in enumerate(group.indices):
+        label = None
+        if group.legend_labels is not None:
+            label = group.legend_labels[k]
 
-    # Trois moments regroupés sur le même axe
-    for k, j in enumerate([1, 2, 3]):
-        axM.plot(time[:-1], u_traj[:, j],  color="black", linestyle=styles[k])
+        ax.plot(
+            time[:-1],
+            u_traj[:, input_idx],
+            color="gray",
+            linestyle=linestyles[k],
+            label=label,
+        )
 
-    axM.set_ylabel(grouped_ylabel)
+    ax.set_ylabel(group.ylabel)
+    ax.grid(True, which="major", axis="both", alpha=0.25)
+    ax.set_axisbelow(True)
+    ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
 
-    handles = [Line2D([0], [0], color="black", linestyle=styles[k]) for k in range(3)]
-    axM.legend(handles, list(group_legend_labels), loc="upper right", fontsize=5)
-    axM.yaxis.get_major_formatter().set_powerlimits((0, 0))
+    if group.legend_labels is not None:
+        ax.legend(loc="upper right", fontsize=5)
 
-    for ax in u_axes:
-        ax.grid(True, alpha=0.2)
-        ax.set_xlabel("Time [s]")
+
+def _get_linestyles(group: InputPlotGroup) -> tuple[str, ...]:
+    n_inputs = len(group.indices)
+
+    if group.linestyles is not None:
+        if len(group.linestyles) != n_inputs:
+            raise ValueError(
+                f"linestyles must have length {n_inputs}, "
+                f"got {len(group.linestyles)}."
+            )
+        return group.linestyles
+
+    default_styles = ("-", "--", ":", "-.")
+
+    if n_inputs <= len(default_styles):
+        return default_styles[:n_inputs]
+
+    return tuple("-" for _ in range(n_inputs))
 
 
 def plot_z(
@@ -169,11 +272,22 @@ def plot_z(
     z_pred: np.ndarray,
 ) -> None:
     """
-    Trace la variable latente réelle et projetée.
+    Plot projected and predicted latent variables.
     """
+    if z_proj.shape != z_pred.shape:
+        raise ValueError(
+            f"z_proj and z_pred must have the same shape, "
+            f"got {z_proj.shape} and {z_pred.shape}."
+        )
+
+    if len(axes) != z_pred.shape[1]:
+        raise ValueError(
+            f"Expected {z_pred.shape[1]} axes, got {len(axes)}."
+        )
+
     for dim in range(z_pred.shape[1]):
         axes[dim].plot(time, z_proj[:, dim], label="z_proj")
         axes[dim].plot(time, z_pred[:, dim], label="z_pred")
-        axes[dim].set_ylabel(rf"$z_{{{dim+1}}}$")
-    axes[-1].set_xlabel("Time [s]")
+        axes[dim].set_ylabel(rf"$z_{{{dim + 1}}}$")
 
+    axes[-1].set_xlabel("Time [s]")

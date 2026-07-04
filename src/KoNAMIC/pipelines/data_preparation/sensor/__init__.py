@@ -1,2 +1,2 @@
 from .sensor_builder import SensorBuilder as SensorDatasetBuilder
-from .loader import SensorLoader
+from .sensor_loader import SensorLoader

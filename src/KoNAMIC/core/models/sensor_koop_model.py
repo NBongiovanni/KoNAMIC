@@ -1,27 +1,34 @@
 import torch
 from torch import Tensor
 
+from KoNAMIC.core.models.model_config import ModelConfig, SensorAutoEncoderConfig
 from .base_koop_model import BaseKoopModel
 from KoNAMIC.core.models.outputs.sensor_outputs import Pred
-from KoNAMIC.core.models.nn.mlp_blocks import (
-    build_mlp, build_state_inclusive_mlp, StateSliceDecoder
-)
+from KoNAMIC.core.models.nn.mlp_blocks import build_mlp, build_state_inclusive_mlp, StateSliceDecoder
 
 
 class SensorKoopModel(BaseKoopModel):
-    def __init__(self, model_params: dict):
-        super().__init__(model_params)
-        self.x_dim = model_params["z_dynamics"]["x_dim"]
-        self.u_dim = model_params["z_dynamics"]["u_dim"]
-        self.z_dim = model_params["z_dynamics"]["z_dim"]
-        self.activation = model_params["auto_encoder"]["activation"]
+    def __init__(self, model_config: ModelConfig):
+        super().__init__(model_config)
+        if model_config.z_dynamics.x_dim is None:
+            raise ValueError("model.z_dynamics.x_dim must be set before building SensorKoopModel.")
 
-        include_state_in_z = model_params["auto_encoder"]["include_state_in_z"]
+        self.x_dim = model_config.z_dynamics.x_dim
+        self.u_dim = model_config.z_dynamics.u_dim
+        self.z_dim = model_config.z_dynamics.z_dim
+
+        if not isinstance(model_config.auto_encoder, SensorAutoEncoderConfig):
+            raise ValueError("SensorKoopModel requires a sensor auto-encoder config.")
+
+        self.auto_encoder_config: SensorAutoEncoderConfig = model_config.auto_encoder
+        self.activation = self.auto_encoder_config.activation
+
+        include_state_in_z = self.auto_encoder_config.include_state_in_z
         if include_state_in_z:
             self.encoder = build_state_inclusive_mlp(
                 dim_in=self.x_dim,
                 latent_extra_dim=self.z_dim - self.x_dim,
-                hidden_dims=model_params["auto_encoder"]["hidden_dims"],
+                hidden_dims=self.auto_encoder_config.hidden_dims,
                 act=self.activation,
             )
             self.decoder = StateSliceDecoder(self.x_dim)
@@ -29,13 +36,13 @@ class SensorKoopModel(BaseKoopModel):
             self.encoder = build_mlp(
                 self.x_dim,
                 self.z_dim,
-                model_params["auto_encoder"]["hidden_dims"],
+                self.auto_encoder_config.hidden_dims,
                 self.activation,
             )
             self.decoder = build_mlp(
                 self.z_dim,
                 self.x_dim,
-                model_params["auto_encoder"]["hidden_dims"],
+                self.auto_encoder_config.hidden_dims,
                 self.activation,
             )
 

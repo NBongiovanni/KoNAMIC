@@ -13,16 +13,17 @@ class OpenLoopLosses:
 
 @dataclass
 class EpochEvalResult:
-    val_1: OpenLoopLosses
-    val_2: OpenLoopLosses
+    open_loop_losses: dict[str, OpenLoopLosses]
     closed_loop_trajectories: list[ClosedLoopTrajectory] | None = None
     closed_loop_metrics: ClosedLoopMetrics | None = None
 
-    def to_phase_losses_dict(self) -> dict[str, tuple[float, SubLosses]]:
-        """
-        Format compatible avec votre logging existant.
-        """
-        return {
-            "val_1": (self.val_1.full_loss, self.val_1.sub_losses),
-            "val_2": (self.val_2.full_loss, self.val_2.sub_losses),
-        }
+    @property
+    def val_1(self) -> OpenLoopLosses:
+        return self.open_loop_losses["val_1"]
+
+    @property
+    def val_2(self) -> OpenLoopLosses:
+        return self.open_loop_losses["val_2"]
+
+    def to_phase_losses_dict(self) -> dict[str, OpenLoopLosses]:
+        return dict(self.open_loop_losses)

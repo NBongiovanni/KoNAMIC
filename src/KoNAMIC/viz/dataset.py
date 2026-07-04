@@ -3,22 +3,31 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Sequence
 
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+import numpy as np
+import numpy.typing as npt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
-from KoNAMIC.core.drone import DroneSpec
-from KoNAMIC.viz.primitives_single import plot_x_gt, plot_u
+from KoNAMIC.core.systems import SystemSpec
+from KoNAMIC.viz.primitives_single import InputPlotGroup, plot_x, plot_u
 from KoNAMIC.viz.style import save_figure
 
 
-def plot_dataset_trajectory(
+def plot_dataset_trajectories(
     *,
     dataset,
-    drone: DroneSpec,
+    system: SystemSpec,
     traj_idx: int,
     save_dir: Path,
     prefix: str,
     only_positions: bool = False,
+    num_columns_states: int = 1,
+    num_columns_inputs: int = 1,
 ) -> None:
+    _validate_num_columns(num_columns_states, name="num_columns_states")
+    _validate_num_columns(num_columns_inputs, name="num_columns_inputs")
 
     time = dataset.time
     x = dataset.states[traj_idx]
@@ -28,93 +37,88 @@ def plot_dataset_trajectory(
     # --------------------------------------------------
     # Convert angles from rad to deg for plotting
     # --------------------------------------------------
-    x = drone.convert_available_angles_to_deg(x)
-    x_ref = drone.convert_available_angles_to_deg(x_ref)
-
-    x_labels = drone.get_x_labels(only_positions=only_positions)
-    u_labels = drone.get_u_labels()
-
-    if only_positions:
-        n_x_plot = drone.x_dim // 2
-        x_plot = x[:, :n_x_plot]
-        x_ref_plot = x_ref[:, :n_x_plot]
-    else:
-        n_x_plot = drone.x_dim
-        x_plot = x
-        x_ref_plot = x_ref
-    # --------------------------------------------------
-    # Number of input axes
-    # --------------------------------------------------
-    if drone.drone_dim == 2:
-        n_u_axes = 2
-    elif drone.drone_dim == 3:
-        # plot_u_3d groups the three moments on the same axis:
-        # one axis for the thrust and one axis for the moments.
-        n_u_axes = 2
-    else:
-        raise ValueError(f"Unsupported drone_dim: {drone.drone_dim}")
+    x = system.convert_available_angles_to_deg(x)
+    x_ref = system.convert_available_angles_to_deg(x_ref)
 
     # --------------------------------------------------
-    # Single figure: states on the left, inputs on the right
+    # Select state dimensions to plot
     # --------------------------------------------------
-    n_rows = max(n_x_plot, n_u_axes)
-
-    fig, axes = plt.subplots(
-        n_rows,
-        2,
-        figsize=(14, 1.8 * n_rows),
-        sharex="col",
-        squeeze=False,
+    x_plot, x_ref_plot, x_labels = prepare_state_plot_data(
+        system=system,
+        x=x,
+        x_ref=x_ref,
+        only_positions=only_positions,
     )
 
-    axes_x = axes[:n_x_plot, 0]
-    axes_u = axes[:n_u_axes, 1]
+    n_states = x_plot.shape[1]
 
-    # Left column: states + references
-    plot_x_gt(
-        axes=axes_x,
+    # --------------------------------------------------
+    # Input groups
+    # --------------------------------------------------
+    input_groups = build_input_plot_groups(system)
+    n_inputs = len(input_groups)
+
+    # --------------------------------------------------
+    # Layout: states block above, inputs block below
+    # --------------------------------------------------
+    fig, state_axes_grid, state_axes_used, input_axes_grid, input_axes_used = (
+        make_states_inputs_layout(
+            n_states=n_states,
+            n_inputs=n_inputs,
+            num_columns_states=num_columns_states,
+            num_columns_inputs=num_columns_inputs,
+        )
+    )
+
+    # --------------------------------------------------
+    # States
+    # --------------------------------------------------
+    plot_x(
+        axes=state_axes_used,
         time=time,
         labels=x_labels,
-        x_gt=x_plot,
+        x_main=x_plot,
+        x_other=x_ref_plot,
         show_legend=True,
-        label_gt="State trajectory",
+        label_main="State trajectory",
+        label_other="Reference",
+        main_linestyle="-",
+        other_linestyle=":",
     )
 
-    ref_dim = min(x_ref_plot.shape[1], n_x_plot)
-    for j in range(ref_dim):
-        axes_x[j].plot(
-            time,
-            x_ref_plot[:, j],
-            linestyle=":",
-            label="Reference" if j == 0 else None,
-        )
-
-    axes_x[-1].set_xlabel("Time [s]")
-    axes_x[0].legend(loc="best", fontsize=7)
-
-    # Right column: inputs
+    # --------------------------------------------------
+    # Inputs
+    # --------------------------------------------------
     plot_u(
-        axes=axes_u,
+        axes=input_axes_used,
         time=time,
         u_traj=u,
-        labels=u_labels,
-        drone_dim=drone.drone_dim,
+        input_groups=input_groups,
     )
 
-    axes_u[-1].set_xlabel("Time [s]")
+    # --------------------------------------------------
+    # Axis labels cleanup
+    # --------------------------------------------------
+    hide_inner_xlabels_block(
+        axes_grid=state_axes_grid,
+        n_cols=num_columns_states,
+    )
+    hide_inner_xlabels_block(
+        axes_grid=input_axes_grid,
+        n_cols=num_columns_inputs,
+    )
+    keep_only_bottom_xlabel(input_axes_grid)
 
-    # Hide unused axes, if one column has fewer rows than the other.
-    for row in range(n_x_plot, n_rows):
-        axes[row, 0].set_visible(False)
+    # --------------------------------------------------
+    # Optional titles
+    # --------------------------------------------------
+    if state_axes_used:
+        state_axes_used[0].set_title("States")
 
-    for row in range(n_u_axes, n_rows):
-        axes[row, 1].set_visible(False)
+    if input_axes_used:
+        input_axes_used[0].set_title("Inputs")
 
-    # Optional column titles.
-    axes[0, 0].set_title("States")
-    axes[0, 1].set_title("Inputs")
-
-    fig.tight_layout()
+    fig.align_ylabels(state_axes_used + input_axes_used)
 
     save_figure(
         fig,
@@ -126,11 +130,13 @@ def plot_dataset_trajectory(
 def plot_dataset_diagnostics(
     *,
     dataset,
-    drone: DroneSpec,
+    system: SystemSpec,
     save_dir: Path,
     split_name: str,
     traj_indices: Sequence[int] = (0, 1, 2, 4),
     only_positions: bool = False,
+    num_columns_states: int = 1,
+    num_columns_inputs: int = 1,
 ) -> None:
     save_dir = Path(save_dir)
 
@@ -138,11 +144,219 @@ def plot_dataset_diagnostics(
         if traj_idx >= dataset.states.shape[0]:
             continue
 
-        plot_dataset_trajectory(
+        plot_dataset_trajectories(
             dataset=dataset,
-            drone=drone,
+            system=system,
             traj_idx=traj_idx,
             save_dir=save_dir,
             prefix=split_name,
             only_positions=only_positions,
+            num_columns_states=num_columns_states,
+            num_columns_inputs=num_columns_inputs,
         )
+
+def prepare_state_plot_data(
+    *,
+    system: SystemSpec,
+    x: np.ndarray,
+    x_ref: np.ndarray,
+    only_positions: bool,
+) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    full_labels = system.get_x_labels(only_positions=False)
+
+    if only_positions:
+        indices = get_main_state_indices(system)
+    else:
+        indices = list(range(x.shape[1]))
+
+    x_plot = x[:, indices]
+    x_ref_plot = x_ref[:, indices]
+    labels = [full_labels[i] for i in indices]
+
+    if x_plot.shape[1] != len(labels):
+        raise ValueError(
+            f"Inconsistent state plot dimensions for system {system.system_name!r}: "
+            f"x_plot has {x_plot.shape[1]} columns, but got {len(labels)} labels."
+        )
+
+    return x_plot, x_ref_plot, labels
+
+
+def get_main_state_indices(system: SystemSpec) -> list[int]:
+    if system.system_name == "quadrotor_2d":
+        return [0, 1]
+
+    if system.system_name == "quadrotor_3d":
+        return [0, 1, 2]
+
+    if system.system_name == "cartpole":
+        return [0, 1]
+
+    raise ValueError(
+        f"Unsupported system_name for main state plot indices: {system.system_name!r}"
+    )
+
+
+def build_input_plot_groups(system: SystemSpec) -> list[InputPlotGroup]:
+    if system.system_name == "quadrotor_2d":
+        return [
+            InputPlotGroup(indices=(0,), ylabel="F [N]"),
+            InputPlotGroup(indices=(1,), ylabel=r"$\tau$ [N.m]"),
+        ]
+
+    if system.system_name == "quadrotor_3d":
+        return [
+            InputPlotGroup(indices=(0,), ylabel="F [N]"),
+            InputPlotGroup(
+                indices=(1, 2, 3),
+                ylabel=r"$\tau$ [N.m]",
+                legend_labels=(r"$\tau_x$", r"$\tau_y$", r"$\tau_z$"),
+            ),
+        ]
+
+    if system.system_name == "cartpole":
+        return [
+            InputPlotGroup(indices=(0,), ylabel="Force [N]"),
+        ]
+
+    raise ValueError(
+        f"Unsupported system_name for input plot groups: {system.system_name!r}"
+    )
+
+
+def make_states_inputs_layout(
+    *,
+    n_states: int,
+    n_inputs: int,
+    num_columns_states: int,
+    num_columns_inputs: int,
+) -> tuple[
+    Figure,
+    npt.NDArray[object],
+    list[Axes],
+    npt.NDArray[object],
+    list[Axes],
+]:
+    n_state_rows, n_state_cols = compute_grid_shape(
+        n_plots=n_states,
+        n_cols=num_columns_states,
+    )
+    n_input_rows, n_input_cols = compute_grid_shape(
+        n_plots=n_inputs,
+        n_cols=num_columns_inputs,
+    )
+
+    total_rows = n_state_rows + n_input_rows
+
+    fig = plt.figure(
+        figsize=(14, 1.8 * total_rows),
+        constrained_layout=True,
+    )
+
+    gs = gridspec.GridSpec(total_rows, ncols=2, figure=fig)
+
+    state_axes_grid, state_axes_used = build_block_axes(
+        fig=fig,
+        gs=gs,
+        start_row=0,
+        n_plots=n_states,
+        n_rows=n_state_rows,
+        n_cols=n_state_cols,
+    )
+
+    input_axes_grid, input_axes_used = build_block_axes(
+        fig=fig,
+        gs=gs,
+        start_row=n_state_rows,
+        n_plots=n_inputs,
+        n_rows=n_input_rows,
+        n_cols=n_input_cols,
+    )
+
+    return fig, state_axes_grid, state_axes_used, input_axes_grid, input_axes_used
+
+
+def compute_grid_shape(
+    *,
+    n_plots: int,
+    n_cols: int,
+) -> tuple[int, int]:
+    if n_plots <= 0:
+        raise ValueError(f"n_plots must be positive, got {n_plots}.")
+
+    _validate_num_columns(n_cols, name="n_cols")
+
+    n_rows = int(np.ceil(n_plots / n_cols))
+    return n_rows, n_cols
+
+
+def build_block_axes(
+    *,
+    fig: Figure,
+    gs: gridspec.GridSpec,
+    start_row: int,
+    n_plots: int,
+    n_rows: int,
+    n_cols: int,
+) -> tuple[npt.NDArray[object], list[Axes]]:
+    axes_grid = np.full((n_rows, n_cols), None, dtype=object)
+    axes_used: list[Axes] = []
+
+    for k in range(n_plots):
+        if n_cols == 1:
+            row = k
+            col = 0
+        elif n_cols == 2:
+            row = k % n_rows
+            col = k // n_rows
+        else:
+            raise NotImplementedError("Only 1 or 2 columns are supported.")
+
+        gs_row = start_row + row
+
+        if n_cols == 1:
+            ax = fig.add_subplot(gs[gs_row, :])
+        else:
+            ax = fig.add_subplot(gs[gs_row, col])
+
+        axes_grid[row, col] = ax
+        axes_used.append(ax)
+
+    return axes_grid, axes_used
+
+
+def hide_inner_xlabels_block(
+    axes_grid: npt.NDArray[object],
+    n_cols: int,
+) -> None:
+    n_rows = axes_grid.shape[0]
+
+    for row in range(n_rows - 1):
+        for col in range(n_cols):
+            ax = axes_grid[row, col]
+            if ax is not None:
+                ax.set_xlabel("")
+                ax.tick_params(labelbottom=False)
+
+
+def keep_only_bottom_xlabel(
+    input_axes_grid: npt.NDArray[object],
+    xlabel: str = "Time [s]",
+) -> None:
+    for ax in input_axes_grid.flatten():
+        if ax is not None:
+            ax.set_xlabel("")
+            ax.tick_params(labelbottom=False)
+
+    bottom_row = input_axes_grid.shape[0] - 1
+
+    for col in range(input_axes_grid.shape[1]):
+        ax = input_axes_grid[bottom_row, col]
+        if ax is not None:
+            ax.set_xlabel(xlabel)
+            ax.tick_params(labelbottom=True)
+
+
+def _validate_num_columns(value: int, *, name: str) -> None:
+    if value not in (1, 2):
+        raise ValueError(f"{name} must be either 1 or 2, got {value}.")

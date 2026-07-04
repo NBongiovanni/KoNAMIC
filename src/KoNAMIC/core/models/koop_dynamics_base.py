@@ -3,18 +3,20 @@ from __future__ import annotations
 import torch
 from torch import nn, Tensor
 
+from KoNAMIC.core.models.model_config import ModelConfig
+
 
 class KoopDynamicsBase(nn.Module):
     """Interface for latent dynamics implementations."""
 
-    def __init__(self, model_params: dict):
+    def __init__(self, model_params: ModelConfig):
         super().__init__()
         self.params = model_params
-        self.u_dim = model_params["z_dynamics"]["u_dim"]
-        self.z_dim = model_params["z_dynamics"]["z_dim"]
+        self.u_dim = model_params.z_dynamics.u_dim
+        self.z_dim = model_params.z_dynamics.z_dim
 
-        zdm = self.params["z_dynamics"]["model"]
-        affine_term = self.params["z_dynamics"]["affine_term"]
+        zdm = self.params.z_dynamics.model
+        affine_term = self.params.z_dynamics.affine_term
         if zdm == "bilinear" and affine_term:
             self.z_dyn_dim = self.z_dim + 1
         else:

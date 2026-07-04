@@ -3,7 +3,9 @@ from __future__ import annotations
 import torch
 from torch import nn, Tensor
 
+from KoNAMIC.core.models.model_config import ModelConfig
 from .koop_dynamics_base import KoopDynamicsBase
+
 
 class KoopDynamicsStructured(KoopDynamicsBase):
     """
@@ -16,14 +18,14 @@ class KoopDynamicsStructured(KoopDynamicsBase):
                    [B2]]
       Bilinear: the bilinear weights are also zeroed on top half rows.
     """
-    def __init__(self, model_params: dict):
+    def __init__(self, model_params: ModelConfig):
         super().__init__(model_params)
 
         assert self.z_dim % 2 == 0, "KoopDynamicsStructured suppose z_dim pair (split moitié/moitié)."
         self.n1 = self.z_dim // 2
         self.n2 = self.z_dim - self.n1
 
-        dt = float(self.params["dt"])
+        dt = self.params.dt
         self.register_buffer("_I1", torch.eye(self.n1))
         self.register_buffer("_dtI1", dt * torch.eye(self.n1))
 
@@ -31,7 +33,7 @@ class KoopDynamicsStructured(KoopDynamicsBase):
         self.A21 = nn.Parameter(torch.zeros(self.n2, self.n1))
         self.A22 = nn.Parameter(torch.eye(self.n2))
 
-        zdm = self.params["z_dynamics"]["model"]
+        zdm = self.params.z_dynamics.model
         if zdm == "linear":
             self.B2 = nn.Parameter(torch.zeros(self.n2, self.u_dim))
         elif zdm == "bilinear":
@@ -73,7 +75,7 @@ class KoopDynamicsStructured(KoopDynamicsBase):
         dtype = self.A21.dtype
         A = self._assemble_A(device=device, dtype=dtype)
 
-        zdm = self.params["z_dynamics"]["model"]
+        zdm = self.params.z_dynamics.model
         if zdm == "linear":
             B = self._assemble_B_linear(device=device, dtype=dtype)
             return A, B
@@ -94,7 +96,7 @@ class KoopDynamicsStructured(KoopDynamicsBase):
         dtype = z_k.dtype
 
         assert u_k.shape[1] == 2, "bilinear_dynamics_step suppose u_dim = 2"
-        aff = bool(self.params["z_dynamics"]["affine_term"])
+        aff = self.params.z_dynamics.affine_term
         if aff:
             ones = torch.ones(batch_size, 1, device=device, dtype=dtype)
             z_ext = torch.cat([ones, z_k], dim=1)  # [B, z_dyn_dim]
@@ -118,7 +120,7 @@ class KoopDynamicsStructured(KoopDynamicsBase):
 
         assert u_k.shape[1] == 4, "bilinear_dynamics_step_3d suppose u_dim = 4"
 
-        aff = bool(self.params["z_dynamics"]["affine_term"])
+        aff = self.params.z_dynamics.affine_term
         if aff:
             ones = torch.ones(batch_size, 1, device=device, dtype=dtype)
             z_ext = torch.cat([ones, z_k], dim=1)  # [B, z_dyn_dim]
@@ -137,7 +139,7 @@ class KoopDynamicsStructured(KoopDynamicsBase):
 
     @torch.no_grad()
     def get_bilinear_B_matrices(self) -> torch.Tensor:
-        assert self.params["z_dynamics"]["model"] == "bilinear", \
+        assert self.params.z_dynamics.model == "bilinear", \
             "Disponible uniquement pour le modèle bilinéaire."
         device = self.A21.device
         dtype = self.A21.dtype

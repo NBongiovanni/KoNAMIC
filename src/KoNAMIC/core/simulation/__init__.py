@@ -4,4 +4,8 @@ from .trajectories import (
     InputsData,
 )
 from .metrics import compute_closed_loop_metrics, ClosedLoopMetrics
-from .io import save_sim_result
+from .baseline_closed_loop_simulator import BaselineClosedLoopSimulator
+from .koopman_closed_loop_simulator import KoopmanClosedLoopSimulator
+from .closed_loop_simulator import ClosedLoopSimulator
+from .postprocessing import build_closed_loop_trajectory
+from .time_grid import build_time_grid

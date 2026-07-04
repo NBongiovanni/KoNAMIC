@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Optional
-
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt
@@ -11,6 +10,7 @@ from matplotlib import rc_context
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
+from KoNAMIC.core.systems import SystemSpec
 from KoNAMIC.viz import DEFAULT_RC_PARAMS
 
 
@@ -20,19 +20,16 @@ class BaseClosedLoopVisualizer(ABC):
 
     def __init__(
         self,
-        drone_dim: int,
-        dt: float,
+        system_spec: SystemSpec,
         only_position: bool,
         num_columns_states: int,
         num_columns_inputs: int,
         rc_params: Optional[dict] = None,
     ) -> None:
-        assert drone_dim in (2, 3)
         assert num_columns_states in (1, 2)
         assert num_columns_inputs in (1, 2)
 
-        self.drone_dim = int(drone_dim)
-        self.dt = float(dt)
+        self.system_spec = system_spec
         self.only_position = bool(only_position)
         self.num_columns_states = int(num_columns_states)
         self.num_columns_inputs = int(num_columns_inputs)

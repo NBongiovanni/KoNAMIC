@@ -1,6 +1,5 @@
 from __future__ import annotations
-
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -14,7 +13,8 @@ class TrajectoryResult:
 
 @dataclass
 class SensorSplitDataset:
-    states: np.ndarray      # (N, T, 12)
-    inputs: np.ndarray      # (N, T, 4)
-    states_ref: np.ndarray  # (N, T, 6)
-    time: np.ndarray        # (T,)
+    states: np.ndarray
+    inputs: np.ndarray
+    states_ref: np.ndarray
+    time: np.ndarray
+    profiles: tuple[str, ...]

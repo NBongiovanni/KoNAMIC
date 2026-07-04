@@ -2,68 +2,50 @@ import joblib
 from pathlib import Path
 
 import torch
-from torch.optim.lr_scheduler import StepLR
-from torch.utils.tensorboard import SummaryWriter
 
-from KoNAMIC.core import utils
+from KoNAMIC import config, paths
+from KoNAMIC.core.scaling import DatasetScalers
+from .model_config import ModelConfig
 from .vision_koop_model import VisionKoopModel
 from .factory import (
-    VisionModelAndTC,
     SensorModelAndScaler,
-    _make_optimizer_vision,
     _build_vision_model,
     _build_sensor_model
 )
 
 
-def load_vision_koop_model_for_train(
-        model_params: dict,
-        training_params: dict,
+def load_koop_model_for_eval(
+        modality: config.Modality,
+        model_config: ModelConfig,
         epoch: int,
-        run_dir: Path
-) -> VisionModelAndTC:
-    model, device = _build_vision_model(model_params)
-
-    ckpt_path = utils.build_checkpoint_path(run_dir, epoch)
-    ckpt = _load_ckpt_state_dict_vision(model, str(ckpt_path), device)
-
-    optimizer = _make_optimizer_vision(training_params["optimizer"], model)
-    optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-
-    scheduler = StepLR(optimizer, step_size=1, gamma=training_params["lr_decay"])
-    scheduler.load_state_dict(ckpt["scheduler_state_dict"])
-
-    writer = SummaryWriter(log_dir=str(training_params["log_dir"]))
-    print(optimizer.param_groups[0]["lr"])
-    model.train()
-    return model, (optimizer, scheduler, writer), ckpt
-
-
-def load_koop_model_for_eval(modality: str, model_params, epoch: int, run_dir: Path):
-    if modality == "vision":
+        run_dir: Path,
+):
+    if modality is config.Modality.VISION:
         koop_model, x_scaler, u_scaler = load_vision_model_for_eval(
-            model_params,
+            model_config,
             epoch,
             run_dir,
         )
-    elif modality == "sensor":
+    elif modality is config.Modality.SENSOR:
         koop_model, x_scaler, u_scaler = load_sensor_koop_model_for_eval(
-            model_params,
+            model_config,
             epoch,
             run_dir,
         )
     else:
         raise ValueError(f"Unknown modality: {modality}")
-    return koop_model, x_scaler, u_scaler
+
+    dataset_scalers = DatasetScalers(x_scaler, u_scaler)
+    return koop_model, dataset_scalers
 
 
 def load_vision_model_for_eval(
-        model_params: dict,
+        model_params: ModelConfig,
         epoch: int,
         run_dir: Path
 ):
     model, device = _build_vision_model(model_params)
-    ckpt_path = utils.build_checkpoint_path(run_dir, epoch)
+    ckpt_path = paths.build_checkpoint_path(run_dir, epoch)
     _load_ckpt_state_dict_vision(model, str(ckpt_path), device=device)
     model.eval()
     u_scaler = joblib.load(run_dir / "u_scaler.pkl")
@@ -72,34 +54,22 @@ def load_vision_model_for_eval(
 
 
 def load_sensor_koop_model_for_eval(
-        model_params: dict,
+        model_params: ModelConfig,
         epoch: int,
         run_dir: Path,
-        pruning_started: bool = False,
 ) -> SensorModelAndScaler:
     model, device = _build_sensor_model(model_params)
 
-    ckpt_path = utils.build_checkpoint_path(run_dir, epoch)
+    ckpt_path = paths.build_checkpoint_path(run_dir, epoch)
     checkpoint = torch.load(ckpt_path, map_location=device)
     sd = checkpoint.get("model_state_dict", {})
-
-    print("ckpt_path:", ckpt_path)
-    print("type(checkpoint):", type(checkpoint))
-
-    if isinstance(checkpoint, dict):
-        print("top-level keys:", list(checkpoint.keys())[:20])
-
-    sd = checkpoint.get("model_state_dict", {})
-    print("type(sd):", type(sd))
-    if isinstance(sd, dict):
-        print("sd keys:", list(sd.keys())[:20])
-
     model.load_state_dict(sd, strict=True)
 
     model.eval()
     u_scaler = joblib.load(run_dir / "u_scaler.pkl")
     x_scaler = joblib.load(run_dir / "x_scaler.pkl")
     return model, x_scaler, u_scaler
+
 
 def _remap_old_dyn_keys(sd: dict) -> dict:
     # ancien -> nouveau

@@ -1,0 +1,277 @@
+from __future__ import annotations
+
+import numpy as np
+
+from KoNAMIC.core.control.config import (
+    ControllerConfigT,
+    KlqrControllerConfig,
+    KmpcControllerConfig,
+    LqrControllerConfig,
+    Quadrotor2DPidConfig,
+    Quadrotor3DPidConfig,
+)
+from KoNAMIC.core.control.mpc_solver import AcadosMPCSolver
+from KoNAMIC.core.models.model_config import ModelConfig
+from KoNAMIC.core.scaling import DatasetScalers
+from KoNAMIC.core.systems import CartPoleSpec, DroneSpec, SystemSpec
+from KoNAMIC.utils import as_array, as_float
+from ..controllers import (
+    BaseController,
+    CartPoleLQRController,
+    KoopmanLQRController,
+    KoopmanMPCController,
+    Quadrotor2DLQRHoverController,
+    Quadrotor2DPIDController,
+    Quadrotor3DLQRHoverController,
+    Quadrotor3DPIDController,
+)
+
+
+def build_baseline_controller(
+    system_spec: SystemSpec,
+    controller_config: ControllerConfigT,
+) -> BaseController:
+    system_name = system_spec.system_name
+
+    if system_name == "quadrotor_2d":
+        if not isinstance(system_spec, DroneSpec):
+            raise TypeError(
+                f"Expected DroneSpec for system_name={system_name!r}, "
+                f"got {type(system_spec).__name__}."
+            )
+        if isinstance(controller_config, Quadrotor2DPidConfig):
+            return _build_quadrotor_2d_pid_controller(system_spec, controller_config)
+
+        if isinstance(controller_config, LqrControllerConfig):
+            return _build_quadrotor_2d_lqr_controller(system_spec, controller_config)
+
+        raise ValueError(
+            f"Unsupported controller={controller_config.controller_type!r} "
+            f"for system_name={system_name!r}."
+        )
+
+    if system_name == "quadrotor_3d":
+        if not isinstance(system_spec, DroneSpec):
+            raise TypeError(
+                f"Expected DroneSpec for system_name={system_name!r}, "
+                f"got {type(system_spec).__name__}."
+            )
+        if isinstance(controller_config, Quadrotor3DPidConfig):
+            return _build_quadrotor_3d_pid_controller(system_spec, controller_config)
+
+        if isinstance(controller_config, LqrControllerConfig):
+            return _build_quadrotor_3d_lqr_controller(system_spec, controller_config)
+
+        raise ValueError(
+            f"Unsupported controller={controller_config.controller_type!r} "
+            f"for system_name={system_name!r}."
+        )
+
+    if system_name == "cartpole":
+        if not isinstance(system_spec, CartPoleSpec):
+            raise TypeError(
+                f"Expected CartPoleSpec for system_name={system_name!r}, "
+                f"got {type(system_spec).__name__}."
+            )
+        if isinstance(controller_config, LqrControllerConfig):
+            return _build_cartpole_lqr_controller(system_spec, controller_config)
+
+        raise ValueError(
+            f"Unsupported controller={controller_config.controller_type!r} "
+            f"for system_name={system_name!r}."
+        )
+
+    raise ValueError(f"Unsupported system_name={system_name!r}.")
+
+
+def _build_quadrotor_2d_lqr_controller(
+    system_spec: DroneSpec,
+    controller_config: LqrControllerConfig,
+) -> Quadrotor2DLQRHoverController:
+    return Quadrotor2DLQRHoverController(
+        dt=controller_config.dt,
+        mass=system_spec.mass,
+        inertia_y=system_spec.inertia[2],
+        gravity=system_spec.gravity,
+        q_diag=as_array(controller_config.q_diag),
+        r_diag=as_array(controller_config.r_diag),
+        thrust_min=controller_config.thrust_min,
+        thrust_max=controller_config.thrust_max,
+        moment_min=-as_float(controller_config.moment_max),
+        moment_max=as_float(controller_config.moment_max),
+        max_moment_rate=as_float(controller_config.max_moment_rates),
+    )
+
+
+def _build_quadrotor_3d_lqr_controller(
+    system_spec: DroneSpec,
+    controller_config: LqrControllerConfig,
+) -> Quadrotor3DLQRHoverController:
+    inertia = as_array(system_spec.inertia)
+    if inertia.shape != (3,):
+        raise ValueError(f"system_spec.inertia must have shape (3,), got {inertia.shape}.")
+
+    moment_max = as_float(controller_config.moment_max)
+    max_moment_rate = as_float(controller_config.max_moment_rates)
+
+    moment_max_vec = moment_max * np.ones(3, dtype=float)
+    max_moment_rates_vec = max_moment_rate * np.ones(3, dtype=float)
+
+    return Quadrotor3DLQRHoverController(
+        dt=controller_config.dt,
+        mass=system_spec.mass,
+        inertia=inertia,
+        gravity=system_spec.gravity,
+        q_diag=as_array(controller_config.q_diag),
+        r_diag=as_array(controller_config.r_diag),
+        thrust_min=controller_config.thrust_min,
+        thrust_max=controller_config.thrust_max,
+        moment_min=-moment_max_vec,
+        moment_max=moment_max_vec,
+        max_moment_rates=max_moment_rates_vec,
+    )
+
+
+def _build_quadrotor_2d_pid_controller(
+    system_spec: DroneSpec,
+    controller_config: Quadrotor2DPidConfig,
+) -> Quadrotor2DPIDController:
+    return Quadrotor2DPIDController(
+        dt=controller_config.dt,
+        x_dim=system_spec.x_dim,
+        u_dim=system_spec.u_dim,
+        mass=system_spec.mass,
+        inertia_y=system_spec.inertia[2],
+        gravity=system_spec.gravity,
+        kp_pos=as_array(controller_config.kp_pos),
+        ki_pos=as_array(controller_config.ki_pos),
+        kd_pos=as_array(controller_config.kd_pos),
+        kp_att=as_float(controller_config.kp_att),
+        ki_att=as_float(controller_config.ki_att),
+        kd_att=as_float(controller_config.kd_att),
+        deriv_filter_n=controller_config.deriv_filter_N,
+        theta_max=np.deg2rad(as_float(controller_config.theta_ref_max)),
+        thrust_min=as_float(controller_config.thrust_min),
+        thrust_max=as_float(controller_config.thrust_max),
+        att_cmd_alpha=as_float(controller_config.att_cmd_alpha),
+        moment_max=as_float(controller_config.moment_max),
+        acc_x_max=as_float(controller_config.acc_xy_max) * system_spec.gravity,
+        max_moment_rate=as_float(controller_config.max_moment_rates),
+    )
+
+
+def _build_cartpole_lqr_controller(
+    system_spec: CartPoleSpec,
+    controller_config: LqrControllerConfig,
+) -> CartPoleLQRController:
+    return CartPoleLQRController(
+        dt=controller_config.dt,
+        cart_mass=system_spec.cart_mass,
+        pole_mass=system_spec.pole_mass,
+        pole_length=system_spec.pole_length,
+        gravity=system_spec.gravity,
+        q_diag=as_array(controller_config.q_diag),
+        r_diag=as_array(controller_config.r_diag),
+        force_min=as_float(controller_config.force_min),
+        force_max=as_float(controller_config.force_max),
+    )
+
+
+def _build_quadrotor_3d_pid_controller(
+    system_spec: DroneSpec,
+    controller_config: Quadrotor3DPidConfig,
+) -> Quadrotor3DPIDController:
+    return Quadrotor3DPIDController(
+        dt=controller_config.dt,
+        x_dim=system_spec.x_dim,
+        u_dim=system_spec.u_dim,
+        mass=system_spec.mass,
+        inertia=system_spec.inertia,
+        gravity=system_spec.gravity,
+        kp_pos=as_array(controller_config.kp_pos),
+        ki_pos=as_array(controller_config.ki_pos),
+        kd_pos=as_array(controller_config.kd_pos),
+        kp_att=as_array(controller_config.kp_att),
+        ki_att=as_array(controller_config.ki_att),
+        kd_att=as_array(controller_config.kd_att),
+        deriv_filter_n=controller_config.deriv_filter_N,
+        phi_max=np.deg2rad(controller_config.phi_ref_max),
+        theta_max=np.deg2rad(controller_config.theta_ref_max),
+        thrust_min=as_float(controller_config.thrust_min),
+        thrust_max=as_float(controller_config.thrust_max),
+        att_cmd_alpha=as_float(controller_config.att_cmd_alpha),
+        moment_max=as_array(controller_config.moment_max),
+        acc_xy_max=as_float(controller_config.acc_xy_max) * system_spec.gravity,
+        max_moment_rate=as_array(controller_config.max_moment_rates),
+    )
+
+
+def build_koopman_controller(
+    modality: config.Modality,
+    data_scalers: DatasetScalers,
+    model_config: ModelConfig,
+    controller_config: KmpcControllerConfig | KlqrControllerConfig,
+    closed_loop_paths,
+    koop_model,
+) -> KoopmanMPCController | KoopmanLQRController:
+    controller_dir = closed_loop_paths.eval_dir
+
+    if isinstance(controller_config, KmpcControllerConfig):
+        solver_backend = AcadosMPCSolver(closed_loop_paths.eval_dir, controller_config)
+        return KoopmanMPCController(
+            modality=modality,
+            model_config=model_config,
+            controller_config=controller_config,
+            solver=solver_backend,
+            koop_model=koop_model,
+            scalers=data_scalers,
+            control_run_dir=controller_dir,
+        )
+
+    if isinstance(controller_config, KlqrControllerConfig):
+        u_min, u_max = _build_klqr_input_bounds(controller_config, int(koop_model.u_dim))
+        return KoopmanLQRController(
+            model_config=model_config,
+            koop_model=koop_model,
+            scalers=data_scalers,
+            q_diag=np.asarray(controller_config.q_diag, dtype=float),
+            r_diag=np.asarray(controller_config.r_diag, dtype=float),
+            u_min=u_min,
+            u_max=u_max,
+        )
+
+    raise TypeError(
+        "Unsupported Koopman controller config: "
+        f"{type(controller_config).__name__}."
+    )
+
+
+def _build_klqr_input_bounds(
+    controller_config: KlqrControllerConfig,
+    u_dim: int,
+) -> tuple[np.ndarray | None, np.ndarray | None]:
+    constraints = controller_config.constraints
+    if not constraints.use_inputs_constraints:
+        return None, None
+
+    force_limits = controller_config.constraints.force_limits
+    torque_limits = controller_config.constraints.torque_limits
+    if torque_limits is None:
+        raise ValueError("controller.constraints.torque_limits is required for KLQR.")
+
+    if u_dim == 2:
+        u_min = np.array([force_limits[0], torque_limits[0]], dtype=float)
+        u_max = np.array([force_limits[1], torque_limits[1]], dtype=float)
+    elif u_dim == 4:
+        u_min = np.array(
+            [force_limits[0], torque_limits[0], torque_limits[0], torque_limits[0]],
+            dtype=float,
+        )
+        u_max = np.array(
+            [force_limits[1], torque_limits[1], torque_limits[1], torque_limits[1]],
+            dtype=float,
+        )
+    else:
+        raise ValueError(f"Unsupported u_dim={u_dim} for KLQR input bounds.")
+
+    return u_min, u_max

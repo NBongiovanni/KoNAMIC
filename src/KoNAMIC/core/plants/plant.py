@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 
-from KoNAMIC.core.drone import DroneSpec
-
 
 class Plant:
     """
@@ -14,17 +12,17 @@ class Plant:
     def __init__(
         self,
         dt: float,
-        drone: DroneSpec | None = None,
+        system,
         discrete_or_continuous: str = "continuous",
     ):
         self.dt = float(dt)
         self.discrete_or_continuous = discrete_or_continuous
-        self.drone = drone
+        self.system = system
 
         # Derived from DroneSpec when available
-        self.drone_dim: int | None = drone.drone_dim if drone is not None else None
-        self.x_dim: int | None = drone.x_dim if drone is not None else None
-        self.u_dim: int | None = drone.u_dim if drone is not None else None
+        self.system_dim: int | None = system.system_dim if system is not None else None
+        self.x_dim: int | None = system.x_dim if system is not None else None
+        self.u_dim: int | None = system.u_dim if system is not None else None
 
     def _dynamics(self, t: float, x: np.ndarray, u: np.ndarray) -> np.ndarray:
         """

@@ -1,22 +1,24 @@
 from dataclasses import asdict
 
-from KoNAMIC.core.drone import DroneSpec
-from .sensor_generation_config import SensorGenerationConfig
+from KoNAMIC.core.systems import SystemSpec
 from .sensor_split_dataset import SensorSplitDataset
-
+from .config import SensorGenerationConfig
 
 def build_metadata(
-    dataset: SensorSplitDataset, cfg: SensorGenerationConfig, split: str, drone: DroneSpec,
+    dataset: SensorSplitDataset,
+    cfg: SensorGenerationConfig,
+    split: str,
+    system_spec: SystemSpec,
 ) -> dict:
 
-    states_names = get_state_names(drone)
-    inputs_names = get_input_names(drone)
-    refs_names = get_ref_names(drone)
+    states_names = system_spec.state_names
+    inputs_names = system_spec.input_names
+    refs_names = system_spec.ref_names
 
     return {
         "split": split,
-        "drone_dim": drone.drone_dim,
-        "drone_name": drone.name,
+        "drone_dim": system_spec.system_dim,
+        "drone_name": system_spec.system_name,
 
         "dt": cfg.dt,
         "t_sim": cfg.t_sim,
@@ -46,67 +48,10 @@ def build_metadata(
         "refs_std": dataset.states_ref.std(axis=(0, 1)),
 
         "config": asdict(cfg),
+
+        "profile_names": list(dataset.profiles),
+        "profile_counts": {
+            profile: dataset.profiles.count(profile)
+            for profile in sorted(set(dataset.profiles))
+        },
     }
-
-
-def get_state_names(drone) -> list[str]:
-    if drone.drone_dim == 2:
-        return ["y", "z", "theta", "y_dot", "z_dot", "theta_dot"]
-
-    if drone.drone_dim == 3:
-        return ["x", "y", "z", "phi", "theta", "psi", "x_dot", "y_dot", "z_dot", "p", "q", "r"]
-    raise ValueError(f"Unsupported drone_dim: {drone.drone_dim}")
-
-
-def get_input_names(drone) -> list[str]:
-    if drone.drone_dim == 2:
-        return [
-            "F",
-            "tau",
-        ]
-
-    if drone.drone_dim == 3:
-        return [
-            "F",
-            "tau_x",
-            "tau_y",
-            "tau_z",
-        ]
-
-    raise ValueError(f"Unsupported drone_dim: {drone.drone_dim}")
-
-
-def get_ref_names(drone) -> list[str]:
-    """
-    states_ref est stocké avec la même dimension que states.
-    Les composantes non directement commandées peuvent correspondre
-    à des références internes, par exemple theta_cmd en 2D
-    ou phi_cmd/theta_cmd en 3D.
-    """
-    if drone.drone_dim == 2:
-        return [
-            "y_ref",
-            "z_ref",
-            "theta_cmd",
-            "y_dot_ref",
-            "z_dot_ref",
-            "theta_dot_ref",
-        ]
-
-    if drone.drone_dim == 3:
-        return [
-            "x_ref",
-            "y_ref",
-            "z_ref",
-            "phi_cmd",
-            "theta_cmd",
-            "psi_ref",
-            "x_dot_ref",
-            "y_dot_ref",
-            "z_dot_ref",
-            "p_ref",
-            "q_ref",
-            "r_ref",
-        ]
-
-    raise ValueError(f"Unsupported drone_dim: {drone.drone_dim}")

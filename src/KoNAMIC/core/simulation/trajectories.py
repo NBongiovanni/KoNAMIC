@@ -7,6 +7,14 @@ from .data import TrajectoryData, InputsData
 
 
 @dataclass
+class TrajectoryResult:
+    states: np.ndarray      # (T, 12)
+    inputs: np.ndarray      # (T, 4)
+    states_ref: np.ndarray  # (T, 6)
+    time: np.ndarray        # (T,)
+
+
+@dataclass
 class ClosedLoopTrajectory:
     time: np.ndarray
     x_init: np.ndarray

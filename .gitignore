@@ -24,3 +24,9 @@ build/
 
 # OS
 .DS_Store
+
+.idea/
+datasets/
+outputs/
+sandbox/
+slurm/

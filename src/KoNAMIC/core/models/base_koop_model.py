@@ -1,12 +1,11 @@
-from pathlib import Path
-
 import torch
 from torch import nn, Tensor
 
-from KoNAMIC.core.utils import save_array_for_matlab
+from KoNAMIC.core.models.model_config import ModelConfig
 from .koop_dynamics_standard import KoopDynamicsStandard
 from .koop_dynamics_base import KoopDynamicsBase
 from .koop_dynamics_structured import KoopDynamicsStructured
+
 
 class BaseKoopModel(nn.Module):
     """
@@ -17,13 +16,18 @@ class BaseKoopModel(nn.Module):
       - par défaut: old dynamics (same as before)
       - switch via z_dynamics.dynamics_impl = "structured"
     """
-    def __init__(self, model_params: dict):
+    def __init__(self, model_params: ModelConfig):
         super().__init__()
         self.params = model_params
-        self.u_dim = model_params["z_dynamics"]["u_dim"]
-        self.z_dim = model_params["z_dynamics"]["z_dim"]
+        if model_params.z_dynamics.u_dim is None:
+            raise ValueError(
+                "model.z_dynamics.u_dim must be set before building a Koopman model. "
+                "Call ModelConfig.with_system_dimensions(...) after loading the YAML config."
+            )
+        self.u_dim = model_params.z_dynamics.u_dim
+        self.z_dim = model_params.z_dynamics.z_dim
 
-        impl = self.params["z_dynamics"]["structured_AB"]
+        impl = self.params.z_dynamics.structured_AB
         if not impl:
             self.dyn: KoopDynamicsBase = KoopDynamicsStandard(model_params)
         elif impl:
@@ -52,13 +56,13 @@ class BaseKoopModel(nn.Module):
         return self.dyn.construct_koop_matrices()
 
     def z_dynamics_step(self, z_k: Tensor, u_k: Tensor) -> Tensor:
-        if self.params["z_dynamics"]["model"] == "bilinear":
+        if self.params.z_dynamics.model == "bilinear":
             if u_k.shape[1] == 2:
                 return self.bilinear_dynamics_step_2d(z_k, u_k)
             elif u_k.shape[1] == 4:
                 return self.bilinear_dynamics_step_3d(z_k, u_k)
             raise ValueError("Bilinear dynamics only implemented for 2D or 4D inputs.")
-        elif self.params["z_dynamics"]["model"] == "linear":
+        elif self.params.z_dynamics.model == "linear":
             return self.linear_dynamics_step(z_k, u_k)
         raise ValueError("Unknown latent dynamics model")
 
@@ -89,12 +93,6 @@ class BaseKoopModel(nn.Module):
         train = sum(p.numel() for p in self.parameters() if p.requires_grad)
         print(f"Total parameters: {total}\nTrainable parameters: {train}")
 
-    def save_matrices(self, path: Path) -> None:
-        A_mat, B_mat = self.construct_koop_matrices()
-        A_np = A_mat.detach().cpu().numpy()
-        B_np = B_mat.detach().cpu().numpy()
-        save_array_for_matlab(str(path / "matrices.mat"), {"A": A_np, "B": B_np})
-
     @torch.no_grad()
     def get_bilinear_B_matrices(self) -> torch.Tensor:
         return self.dyn.get_bilinear_B_matrices()
@@ -102,6 +100,4 @@ class BaseKoopModel(nn.Module):
     @torch.no_grad()
     def get_A_matrix(self) -> torch.Tensor:
         return self.dyn.get_A_matrix()
-
-
 

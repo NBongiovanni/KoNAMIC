@@ -22,31 +22,23 @@ class Pred:
 
     def build_state_right(self) -> Tensor:
         """
-        Returns state (x, y, theta) for right wing.
+        Returns state (x, y, theta) for right view.
         Shape: (batch, T, 3)
         """
-        angles = self.angles_right
-        if angles.ndim == 2:
-            angles = angles.unsqueeze(-1)
-
-        x = self.centroids_right[..., 0:1]
-        y = self.centroids_right[..., 2:3]
-
-        return torch.cat([x, y, angles], dim=-1)
+        return _build_state_from_centroids_angles(
+            self.centroids_right,
+            self.angles_right,
+        )
 
     def build_state_left(self) -> Tensor:
         """
-        Returns state (x, y, theta) for left wing.
+        Returns state (x, y, theta) for left view.
         Shape: (batch, T, 3)
         """
-        angles = self.angles_left
-        if angles.ndim == 2:
-            angles = angles.unsqueeze(-1)
-
-        x = self.centroids_left[..., 1:2]
-        y = self.centroids_left[..., 3:4]
-
-        return torch.cat([x, y, angles], dim=-1)
+        return _build_state_from_centroids_angles(
+            self.centroids_left,
+            self.angles_left,
+        )
 
     @staticmethod
     def augment_with_velocity(state: Tensor, dt: float) -> Tensor:
@@ -61,6 +53,24 @@ class Pred:
 
         return torch.cat([state_cut, vel], dim=-1)
 
+
+
+def _build_state_from_centroids_angles(centroids: Tensor, angles: Tensor) -> Tensor:
+    if centroids.ndim == 4 and centroids.shape[-2] == 1:
+        centroids = centroids.squeeze(-2)
+    if centroids.shape[-1] != 2:
+        raise ValueError(f"Expected centroids last dimension to be 2, got {centroids.shape}.")
+
+    if angles.ndim == centroids.ndim - 1:
+        angles = angles.unsqueeze(-1)
+    if angles.ndim == 3 and angles.shape[-1] == 1:
+        pass
+    elif angles.ndim == 4 and angles.shape[-2] == 1 and angles.shape[-1] == 1:
+        angles = angles.squeeze(-2)
+    else:
+        raise ValueError(f"Unexpected angles shape: {angles.shape}.")
+
+    return torch.cat([centroids, angles], dim=-1)
 
 @dataclass
 class Rec:

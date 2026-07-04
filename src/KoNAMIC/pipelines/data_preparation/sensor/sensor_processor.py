@@ -4,38 +4,39 @@ from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
 from sklearn.preprocessing import StandardScaler
 
+
 class SensorProcessor:
     def __init__(
-            self,
-            batch_size: int,
-            train_datasets_specs: dict,
-            val_1_datasets_specs: dict,
-            val_2_datasets_specs: dict,
-            raw_datasets: dict,
-            scaler_specs: dict,
-            delay: int,
+        self,
+        batch_size: int,
+        train_datasets_specs,
+        val_datasets_specs,
+        raw_datasets: dict,
+        scaler_specs,
+        delay: int,
+        seed: int,
     ):
         super().__init__()
         self.batch_size = batch_size
         self.train_datasets_specs = train_datasets_specs
-        self.val_1_datasets_specs = val_1_datasets_specs
-        self.val_2_datasets_specs = val_2_datasets_specs
+        self.val_datasets_specs = tuple(val_datasets_specs)
         self.raw_datasets = raw_datasets
         self.scaler_specs = scaler_specs
         self.delay = delay
+        self.seed = seed
 
         self.x_scaler = None
         self.u_scaler = None
         self.processed_datasets = None
-        self.data_loader = {}
+        self.raw_data_loaders = {}
 
     def generate_x_scaler(self) -> None:
         x_data = self.raw_datasets["train"]["x"]
         scaler = StandardScaler()
         scaler = self.fit_standardizer(x_data, scaler)
-        mean_scaler_x = np.asarray(self.scaler_specs["mean_x"], dtype=scaler.mean_.dtype)
+        mean_scaler_x = np.asarray(self.scaler_specs.mean_x, dtype=scaler.mean_.dtype)
 
-        if self.scaler_specs["center"]:
+        if self.scaler_specs.center:
             assert mean_scaler_x.shape == scaler.mean_.shape, (mean_scaler_x.shape, scaler.mean_.shape)
             scaler.mean_ = mean_scaler_x
             # mean_ is overridden to center around a reference operating point
@@ -45,39 +46,27 @@ class SensorProcessor:
         u_data = self.raw_datasets["train"]["u"]
         scaler = StandardScaler()
         scaler = self.fit_standardizer(u_data, scaler)
-        mean_scaler_u = np.asarray(self.scaler_specs["mean_u"], dtype=scaler.mean_.dtype)
+        mean_scaler_u = np.asarray(self.scaler_specs.mean_u, dtype=scaler.mean_.dtype)
 
-        if self.scaler_specs["center"]:
+        if self.scaler_specs.center:
             assert mean_scaler_u.shape == scaler.mean_.shape, (mean_scaler_u.shape, scaler.mean_.shape)
             scaler.mean_ = mean_scaler_u
             # mean_ is overridden to center around a reference operating point
         self.u_scaler = scaler
 
-    def build_data_loader(self) -> None:
-        self.data_loader["train"] = self._build_single_data_loader(
+    def build_raw_data_loader(self) -> None:
+        self.raw_data_loaders["train"] = self._build_single_data_loader(
             "train",
             True,
-            True
         )
 
-        self.data_loader["val_1"] = self._build_single_data_loader(
-            "val_1",
-            False,
-            False
-        )
+        for val_cfg in self.val_datasets_specs:
+            self.raw_data_loaders[val_cfg.split] = self._build_single_data_loader(
+                val_cfg.split,
+                True,
+            )
 
-        self.data_loader["val_2"] = self._build_single_data_loader(
-            "val_2",
-            False,
-            False
-        )
-
-    def _build_single_data_loader(
-            self,
-            phase: str,
-            shuffle: bool,
-            drop_last: bool
-    ) -> DataLoader:
+    def _build_single_data_loader(self, phase: str, shuffle: bool) -> DataLoader:
         batch_size = self.batch_size
         x_data = self.processed_datasets[phase]["x"]
         u_data = self.processed_datasets[phase]["u"]
@@ -86,40 +75,49 @@ class SensorProcessor:
         u_data = torch.from_numpy(u_data).float()
 
         tensor_dataset = TensorDataset(x_data, u_data)
+        generator = torch.Generator()
+        generator.manual_seed(self._phase_seed(phase))
+
         return DataLoader(
             dataset=tensor_dataset,
             batch_size=batch_size,
             shuffle=shuffle,
-            drop_last=drop_last,
-            pin_memory=True
+            drop_last=True,
+            pin_memory=True,
+            generator=generator,
         )
+
+    def _phase_seed(self, phase: str) -> int:
+        if phase == "train":
+            return self.seed
+
+        for idx, val_cfg in enumerate(self.val_datasets_specs, start=1):
+            if phase == val_cfg.split:
+                return self.seed + idx
+
+        raise KeyError(phase)
 
     def process_datasets(self) -> None:
         self.processed_datasets = {
             "train": self._process_dataset(
                 phase="train",
-                num_steps_loaded=self.train_datasets_specs["num_steps_loaded"],
-                window_size=self.train_datasets_specs["num_steps_pred"],
+                num_steps_loaded=self.train_datasets_specs.num_steps_loaded,
+                window_size=self.train_datasets_specs.num_steps_pred,
             )
         }
 
-        self.processed_datasets["val_1"] = self._process_dataset(
-            phase="val_1",
-            num_steps_loaded=self.val_1_datasets_specs["num_steps_loaded"],
-            window_size=self.val_1_datasets_specs["num_steps_pred"],
-        )
-
-        self.processed_datasets["val_2"] = self._process_dataset(
-            phase="val_2",
-            num_steps_loaded=self.val_2_datasets_specs["num_steps_loaded"],
-            window_size=self.val_2_datasets_specs["num_steps_pred"],
-        )
+        for val_cfg in self.val_datasets_specs:
+            self.processed_datasets[val_cfg.split] = self._process_dataset(
+                phase=val_cfg.split,
+                num_steps_loaded=val_cfg.num_steps_loaded,
+                window_size=val_cfg.num_steps_pred,
+            )
 
     def _process_dataset(
-            self,
-            phase: str,
-            num_steps_loaded: int | None,
-            window_size: int,
+        self,
+        phase: str,
+        num_steps_loaded: int | None,
+        window_size: int,
     ) -> dict:
         u = self.raw_datasets[phase]["u"]
         x = self.raw_datasets[phase]["x"]
@@ -130,7 +128,7 @@ class SensorProcessor:
 
         u_sliced = self._slice_and_scale(u, self.u_scaler, window_size)
 
-        if self.scaler_specs["scale_x"]:
+        if self.scaler_specs.scale_x:
             x_sliced = self._slice_and_scale(x, self.x_scaler, window_size)
         else:
             x_sliced = self._slice_and_scale(x, None, window_size)
@@ -150,8 +148,10 @@ class SensorProcessor:
         assert scaled.shape[1] > self.delay
         scaled = scaled[:, self.delay:]
         n_traj, n_steps, dim = scaled.shape
-        assert n_steps % window_size == 0, f"sinon il faut gérer le reste proprement {n_steps} {window_size}"
-
+        assert n_steps % window_size == 0, (
+            f"n_steps must be divisible by window_size, got "
+            f"n_steps={n_steps}, window_size={window_size}"
+        )
         sliced = scaled.reshape(n_traj, n_steps // window_size, window_size, dim)
         sliced_arr = sliced.reshape(-1, window_size, dim)  # concat des trajs, mais sans mélange
         return sliced_arr

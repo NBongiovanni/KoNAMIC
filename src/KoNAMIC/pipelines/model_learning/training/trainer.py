@@ -1,150 +1,140 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TypeAlias
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 import numpy as np
 import torch
 from torch import Tensor
+from torch.utils.data import DataLoader
 from tqdm import tqdm
-from sklearn.preprocessing import StandardScaler
 
-from KoNAMIC.core import utils
-from KoNAMIC.core.drone import DroneSpec
+from KoNAMIC import paths
+from KoNAMIC.config import Modality
+from KoNAMIC.core.scaling import DatasetScalers
 from KoNAMIC.core.models import (
     SensorKoopModel,
     VisionKoopModel,
-    SensorValForwardOutputs,
-    VisionValForwardOutputs,
-    TrainingContext,
 )
-
-from ..losses.compute import SensorLossComputer, VisionLossComputer, mean_sub_losses
-from ..losses.logger import TrainingLogger
-from ..evaluation.evaluator import ModelEvaluator
-from ..evaluation.closed_loop_replay import ClosedLoopReplayBuffer, ReplayConfig
-from ..evaluation.ground_truth import build_ground_truth_from_images
-from .config import PredictionHorizon
+from KoNAMIC.pipelines.data_preparation.data_loaders import PreparedDataLoaders
+from .context import TrainingContext
+from KoNAMIC.core.systems import SystemSpec
+from ..training_evaluator import TrainingEvaluator
+from ..closed_loop_replay import ClosedLoopReplayBuffer, ReplayConfig
+from ..losses import build_loss_computer, reduce_sub_losses, SubLosses
+from ..losses.classes import OpenLoopLosses
+from ..reporting import TrainingLogger, build_metrics_backend
 from .checkpoint_manager import CheckpointManager
 from .curriculum import CurriculumManager
+from ..config import TrainingPipelineConfig
+from .forward_loss_computer import build_forward_loss_computer
+from ..closed_loop_augmenter import ClosedLoopAugmenter
+from ..closed_loop_trajectory_generator import ClosedLoopTrajectoryGenerator
 
 BatchType: TypeAlias = Sequence[Tensor]
 KoopModel: TypeAlias = SensorKoopModel | VisionKoopModel
-SubLosses: TypeAlias = dict[str, float]
 
 
 class Trainer:
     def __init__(
         self,
-        modality: str,
-        run_paths: utils.RunPaths,
-        model: KoopModel,
+        modality: Modality,
+        system_spec: SystemSpec,
+        run_config: TrainingPipelineConfig,
+        run_paths: paths.RunPaths,
+        koop_model: KoopModel,
         training_ctx: TrainingContext,
-        data_loaders: dict,
-        prediction_horizon: PredictionHorizon,
-        drone: DroneSpec,
-        x_scaler: StandardScaler,
-        u_scaler: StandardScaler,
-        model_params: dict,
-        training_params: dict,
-        control_params: dict,
+        data_loaders: PreparedDataLoaders | Mapping[str, DataLoader],
+        scalers: DatasetScalers,
+        model_evaluator: TrainingEvaluator,
     ) -> None:
+        """Initialize the training orchestrator for one Koopman learning run.
+
+        The trainer owns epoch scheduling, batch iteration, loss computation,
+        optimizer steps, checkpointing, and metric logging. It delegates
+        rollout-quality evaluation to TrainingEvaluator instead of mixing
+        evaluation policy into the optimization loop. Optional closed-loop data
+        augmentation is delegated to a dedicated augmenter so generated
+        trajectories remain separate from the base datasets. Sensor and vision
+        training share this high-level loop through typed configs and helper
+        objects. Model dimensions, scalers, loaders, and controllers are
+        expected to be resolved before construction. Keep reusable math, losses,
+        simulation, and controller logic in their dedicated modules.
+        """
 
         self.modality = modality
         self.run_paths = run_paths
-        self.model_params = model_params
-        self.control_params = control_params
-        self.training_params = training_params
-        self.koop_model = model
-        self.data_loaders = data_loaders
-        self.drone = drone
+        self.trainer_config = run_config.trainer
+        self.closed_loop_training_config = run_config.closed_loop_training
 
-        self.prediction_horizon = prediction_horizon
-        self.num_steps_train = prediction_horizon.train
-        self.num_val_datasets = len(prediction_horizon.val)
+        self.koop_model = koop_model
+        self.data_loaders = data_loaders
+        self.system_spec = system_spec
+        self.evaluator = model_evaluator
+
+        self.num_steps_train = run_config.prediction_horizon.train
+        self.num_val_datasets = len(run_config.prediction_horizon.val)
 
         self.optimizer = training_ctx.optimizer
         self.scheduler = training_ctx.scheduler
         self.writer = training_ctx.writer
-        self.x_scaler = x_scaler
-        self.u_scaler = u_scaler
-
-        self.device = next(self.koop_model.parameters()).device
-        self.grad_clip_max_norm = float(training_params.get("grad_clip_max_norm", 1.0))
-
+        self.scalers = scalers
+        self.grad_clip_max_norm = self.trainer_config.grad_clip_max_norm
         self.current_epoch = 0
 
-        # --- modality-specific objects ---
-        self.curriculum = None
-        if self.modality == "sensor":
-            self.loss_computer = SensorLossComputer(training_params["loss_weights"])
-        elif self.modality == "vision":
-            self.curriculum = CurriculumManager(training_params["curriculum"])
-            self.loss_computer = VisionLossComputer(training_params["loss_weights"])
-        else:
-            raise ValueError(f"Unknown modality: {self.modality}")
+        self.loss_computer = build_loss_computer(
+            modality=self.modality.key,
+            loss_weights=self.trainer_config.loss_weights,
+            system_spec=self.system_spec,
+            x_scaler=self.scalers.x,
+            scale_x=run_config.data_preparation.scaler.scale_x,
+        )
+
+        self.curriculum: CurriculumManager | None = None
+        if self.modality is Modality.VISION and self.trainer_config.curriculum is not None:
+            self.curriculum = CurriculumManager(self.trainer_config.curriculum)
+
+        logging_backend = build_metrics_backend(
+            writer=self.writer,
+            logging_config=self.trainer_config.logging,
+            run_name=self.run_paths.run_dir.name,
+            run_config=run_config.to_dict(),
+        )
+        logging_backend.log_config(run_config.to_dict())
 
         self.logger = TrainingLogger(
-            modality=self.modality,
-            writer=self.writer,
+            modality=self.modality.key,
+            backend=logging_backend,
             num_val_datasets=self.num_val_datasets,
+            system_spec=self.system_spec,
         )
 
         self.checkpoint_manager = CheckpointManager(
             checkpoints_dir=self.run_paths.checkpoints_dir,
-            checkpoint_every=int(training_params["checkpoint_every"]),
+            checkpoint_every=int(self.trainer_config.checkpoint_every),
         )
-
-        self.evaluator = ModelEvaluator(
+        self.closed_loop_augmenter = self._build_closed_loop_augmenter()
+        self.forward_loss_computer = build_forward_loss_computer(
             modality=self.modality,
-            run_paths=self.run_paths,
-            current_epoch = self.current_epoch,
-            model_params=self.model_params,
-            control_params=self.control_params,
-            drone=self.drone,
             koop_model=self.koop_model,
-            data_loaders=self.data_loaders,
-            device=self.device,
-            prediction_horizon=self.prediction_horizon,
-            reduce_sub_losses_fn=self.reduce_sub_losses,
-            forward_and_loss_fn=self.forward_and_loss,
-            closed_loop_every=training_params["closed_loop_every"],
-            x_scaler=self.x_scaler,
-            u_scaler=self.u_scaler,
+            loss_computer=self.loss_computer,
+            phases_active=self._vision_phases_active,
+            effective_weight=self._vision_weight_fn,
         )
-
-        # Pour ce commit minimal, le replay closed-loop reste sensor-only.
-        # Sinon il risque de réinjecter des batchs (x, u) dans un modèle vision.
-        if self.modality == "sensor":
-            self.closed_loop_replay = ClosedLoopReplayBuffer(
-                x_scaler=self.x_scaler,
-                u_scaler=self.u_scaler,
-                num_steps=self.num_steps_train,
-                config=ReplayConfig(
-                    enabled=training_params.get("closed_loop_replay_enabled", True),
-                    max_num_trajectories=training_params.get("closed_loop_replay_max_traj", 50),
-                    batch_size=training_params.get("closed_loop_replay_batch_size", 32),
-                ),
-            )
-        else:
-            if training_params.get("closed_loop_replay_enabled", False):
-                print(
-                    "[WARNING] closed_loop_replay_enabled=True ignored for vision. "
-                    "Closed-loop replay is currently sensor-only."
-                )
-            self.closed_loop_replay = None
 
     def train_model(self) -> None:
-        for epoch in range(self.training_params["num_epochs"]):
+        for epoch in range(self.trainer_config.num_epochs):
             self.current_epoch = epoch
+            self.evaluator.set_epoch(epoch)
             train_loss, train_sub_losses, mean_grad_norm = self.train_one_epoch()
-            train_result = train_loss, train_sub_losses
+            train_result = OpenLoopLosses(
+                full_loss=train_loss,
+                sub_losses=train_sub_losses,
+            )
 
             eval_result = self.evaluator.evaluate_epoch(epoch)
-
-            if self.closed_loop_replay is not None:
-                self.closed_loop_replay.add(eval_result.closed_loop_trajectories)
+            if self.closed_loop_augmenter is not None:
+                self.closed_loop_augmenter.maybe_generate(epoch=epoch)
 
             phase_losses = {"train": train_result, **eval_result.to_phase_losses_dict()}
             self.logger.log_losses(
@@ -173,145 +163,124 @@ class Trainer:
         total_norm_arr: list[float] = []
 
         self._train_on_loader(
-            loader=self.data_loaders["train"],
+            loader=self._train_loader(),
             full_loss_arr=full_loss_arr,
             sub_losses_arr=sub_losses_arr,
             total_norm_arr=total_norm_arr,
         )
 
-        if self.closed_loop_replay is not None:
-            control_dir = self.run_paths.training_eval_dir("closed_loop", self.current_epoch)
-            control_dir.mkdir(parents=True, exist_ok=True)
-            replay_loader = self.closed_loop_replay.make_dataloader()
-            if replay_loader is not None:
-                self._train_on_loader(
-                    loader=replay_loader,
-                    full_loss_arr=full_loss_arr,
-                    sub_losses_arr=sub_losses_arr,
-                    total_norm_arr=total_norm_arr,
-                )
+        self._train_on_closed_loop_replay(
+            full_loss_arr=full_loss_arr,
+            sub_losses_arr=sub_losses_arr,
+            total_norm_arr=total_norm_arr,
+        )
 
         self.scheduler.step()
 
         full_mean = float(np.mean(full_loss_arr)) if full_loss_arr else float("nan")
-        sub_mean = self.reduce_sub_losses(sub_losses_arr)
+        sub_mean = reduce_sub_losses(sub_losses_arr)
         mean_grad_norm = float(np.mean(total_norm_arr)) if total_norm_arr else float("nan")
         return full_mean, sub_mean, mean_grad_norm
 
-    def forward_and_loss(self, batch: BatchType, num_steps: int):
-        if self.modality == "sensor":
-            return self.forward_and_loss_sensor(batch, num_steps)
-        if self.modality == "vision":
-            return self.forward_and_loss_vision(batch, num_steps)
-        raise ValueError(f"Unknown modality: {self.modality}")
+    def _train_loader(self) -> DataLoader:
+        if isinstance(self.data_loaders, PreparedDataLoaders):
+            return self.data_loaders.train.loader
 
-    def forward_and_loss_sensor(self, batch: BatchType, num_steps: int):
-        x_gt_scaled, u_traj_scaled = (
-            x.to(self.device, non_blocking=True) for x in batch
+        return self.data_loaders["train"]
+
+    def _train_on_closed_loop_replay(
+            self,
+            full_loss_arr: list[float],
+            sub_losses_arr: list[SubLosses],
+            total_norm_arr: list[float],
+    ) -> None:
+        if self.closed_loop_augmenter is None:
+            return
+
+        replay_loader = self.closed_loop_augmenter.make_dataloader(
+            epoch=self.current_epoch,
         )
+        if replay_loader is None:
+            return
 
-        rec, pred = self.koop_model.forward(
-            x_gt_scaled[:, 0],
-            u_traj_scaled,
-            num_steps,
+        self._train_on_loader(
+            loader=replay_loader,
+            full_loss_arr=full_loss_arr,
+            sub_losses_arr=sub_losses_arr,
+            total_norm_arr=total_norm_arr,
         )
-        z_proj = self.koop_model.batch_projection(x_gt_scaled)
-
-        model_outputs = SensorValForwardOutputs(
-            rec=rec,
-            pred=pred,
-            proj=z_proj,
-            state_gt_scaled=x_gt_scaled,
-            inputs_scaled=u_traj_scaled,
-        )
-        return self.loss_computer.compute(model_outputs, self.device)
-
-    def forward_and_loss_vision(self, batch: BatchType, num_steps: int):
-        """
-        Expected vision batch convention from the old VisionTrainer:
-            y_data: (B, T, C, H, W)
-            u_data: (B, T, n_u)
-            x_data: optional physical/geometric state, used for targets/diagnostics
-        """
-        if len(batch) != 3:
-            shapes = [tuple(x.shape) for x in batch]
-            raise ValueError(
-                "Vision training expects batch=(y_data, u_data, x_data), "
-                f"but got len(batch)={len(batch)}, shapes={shapes}"
-            )
-
-        y_data, u_data, x_data = (
-            x.to(self.device, non_blocking=True) for x in batch
-        )
-
-        self._assert_vision_shapes(y_data, u_data, x_data)
-
-        model_outputs = self.koop_model.forward(
-            y_init=y_data[:, 0],
-            u_traj=u_data,
-            num_steps=num_steps,
-        )
-
-        z_proj = self.koop_model.batch_projection(y_data, u_data)
-
-        delay = self.model_params["auto_encoder"].get("delay", 1)
-        targets = build_ground_truth_from_images(
-            y_data=y_data,
-            x_data=x_data,
-            drone_dim=self.model_params["drone_dim"],
-            delay=delay,
-        )
-
-        val_outputs = VisionValForwardOutputs(
-            rec=model_outputs.rec,
-            pred=model_outputs.pred,
-            g_t=targets,
-            inputs_scaled=u_data,
-            state=x_data,
-        )
-
-        # Pour l’instant, VisionLossComputer attend directement model_outputs,
-        # z_proj et targets. On garde val_outputs prêt pour une future
-        # harmonisation avec SensorValForwardOutputs.
-        _ = val_outputs
-
-        assert self.curriculum is not None
-
-        return self.loss_computer.compute(
-            model_outputs=model_outputs,
-            z_proj=z_proj,
-            targets=targets,
-            phases_active=self.curriculum.phases_active,
-            effective_weight=self._vision_weight_fn,
-            num_views=self.model_params["num_views"],
-        )
-
-    def reduce_sub_losses(self, sub_losses_arr: list[SubLosses]) -> SubLosses:
-        return mean_sub_losses(sub_losses_arr)
 
     def _vision_weight_fn(self, base: float, key: str) -> float:
-        assert self.curriculum is not None
+        if self.curriculum is None:
+            return base
         return self.curriculum.effective_weight(base, key, self.current_epoch)
 
+    def _vision_phases_active(self) -> list[bool]:
+        if self.curriculum is None:
+            return [False]
+        return self.curriculum.phases_active
+
+    def _build_closed_loop_augmenter(self) -> ClosedLoopAugmenter | None:
+        replay_config = ReplayConfig(self.closed_loop_training_config)
+
+        if not replay_config.enabled:
+            return None
+
+        if self.modality is not Modality.SENSOR:
+            print(
+                "[WARNING] closed_loop_training.enabled=True ignored for vision. "
+                "Closed-loop augmentation is currently sensor-only."
+            )
+            return None
+
+        replay_buffer = ClosedLoopReplayBuffer(
+            scalers=self.scalers,
+            num_steps=self.num_steps_train,
+            config=replay_config,
+        )
+
+        trajectory_generator = ClosedLoopTrajectoryGenerator(
+            modality=self.modality,
+            run_paths=self.run_paths,
+            model_config=self.evaluator.model_config,
+            controller_config=self.evaluator.run_config.closed_loop_training_controller,
+            closed_loop_training_config=self.closed_loop_training_config,
+            koop_model=self.koop_model,
+            system_spec=self.system_spec,
+            scalers=self.scalers,
+            scenario_generator=self.evaluator.scenario_generator,
+            plant=self.evaluator.plant,
+        )
+
+        return ClosedLoopAugmenter(
+            config=self.closed_loop_training_config,
+            replay_buffer=replay_buffer,
+            generator=trajectory_generator,
+        )
+
     def _log_training_state(self, mean_grad_norm: float) -> None:
-        if self.modality == "sensor":
+        if self.modality is Modality.SENSOR:
             self.logger.log_training_state(
                 epoch=self.current_epoch,
                 optimizer=self.optimizer,
                 total_norm=mean_grad_norm,
             )
-        elif self.modality == "vision":
-            assert self.curriculum is not None
+        elif self.modality is Modality.VISION:
+            if self.curriculum is None:
+                self.logger.log_training_state(
+                    epoch=self.current_epoch,
+                    optimizer=self.optimizer,
+                    total_norm=mean_grad_norm,
+                )
+                return
 
-            # même logique que dans l'ancien VisionTrainer :
-            # activation du curriculum à la fin de l'epoch
             self.curriculum.maybe_activate_phases(self.current_epoch)
 
             self.logger.log_training_state(
                 epoch=self.current_epoch,
                 optimizer=self.optimizer,
                 total_norm=mean_grad_norm,
-                base=self.training_params["loss_weights"],
+                base=self.trainer_config.loss_weights,
                 effective_weight=self._vision_weight_fn,
                 phase_index=self.curriculum.current_phase_index() + 1,
             )
@@ -327,57 +296,20 @@ class Trainer:
     ) -> None:
         for batch in tqdm(loader):
             self.optimizer.zero_grad(set_to_none=True)
-
-            full_loss, sub_losses = self.forward_and_loss(
+            full_loss, sub_losses = self.forward_loss_computer.compute(
                 batch=batch,
                 num_steps=self.num_steps_train,
             )
-
             full_loss.backward()
 
             total_norm = torch.nn.utils.clip_grad_norm_(
                 self.koop_model.parameters(),
-                self.grad_clip_max_norm,
+                self.grad_clip_max_norm
+                if self.grad_clip_max_norm is not None
+                else float("inf"),
             )
-
             self.optimizer.step()
 
             full_loss_arr.append(float(full_loss.detach().cpu().item()))
             sub_losses_arr.append(sub_losses)
             total_norm_arr.append(float(total_norm.detach().cpu().item()))
-
-    @staticmethod
-    def _assert_vision_shapes(
-        y_data: Tensor,
-        u_data: Tensor,
-        x_data: Tensor,
-    ) -> None:
-        if y_data.dim() != 5:
-            raise ValueError(
-                "Expected y_data with shape (B,T,C,H,W), "
-                f"got {tuple(y_data.shape)}"
-            )
-
-        if u_data.dim() != 3:
-            raise ValueError(
-                "Expected u_data with shape (B,T,n_u), "
-                f"got {tuple(u_data.shape)}"
-            )
-
-        if x_data.dim() < 2:
-            raise ValueError(
-                "Expected x_data with at least 2 dimensions, "
-                f"got {tuple(x_data.shape)}"
-            )
-
-        if y_data.shape[0] != u_data.shape[0]:
-            raise ValueError(
-                f"Batch size mismatch: y_data={tuple(y_data.shape)}, "
-                f"u_data={tuple(u_data.shape)}"
-            )
-
-        if y_data.shape[1] != u_data.shape[1]:
-            raise ValueError(
-                f"Time dimension mismatch: y_data={tuple(y_data.shape)}, "
-                f"u_data={tuple(u_data.shape)}"
-            )

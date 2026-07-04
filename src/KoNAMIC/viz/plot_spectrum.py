@@ -12,7 +12,7 @@ def plot_and_save_eigs_compare(
         eigs_b,
         label_a="Linear",
         label_b="Bilinear",
-        title="Eigenvalues comparison",
+        title="Eigenvalues experiment_comparison",
         savepath=None,
         dpi=300,
         show_unit_circle=True,
@@ -20,7 +20,7 @@ def plot_and_save_eigs_compare(
         equal_aspect=True,
 ):
     """
-    Plot and (optionally) save a comparison of two eigenvalue sets in the complex plane.
+    Plot and (optionally) save a experiment_comparison of two eigenvalue sets in the complex plane.
 
     Parameters
     ----------

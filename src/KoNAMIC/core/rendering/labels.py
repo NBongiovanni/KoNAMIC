@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from KoNAMIC.core.utils import CaseConfig
+from KoNAMIC.config import CaseConfig
 
 _DYNAMICS_LABELS = {
     "linear": "Linear model",

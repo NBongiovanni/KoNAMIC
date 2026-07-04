@@ -1,43 +1,65 @@
 from __future__ import annotations
+
 from dataclasses import replace
 from pathlib import Path
+
 import numpy as np
 from tqdm import tqdm
 
-from KoNAMIC.core.drone import DroneSpec
+from KoNAMIC.config.config_utils import save_yaml
+
+from KoNAMIC.core.control.controllers import BaseController
+from KoNAMIC.core.systems import SystemSpec
 from KoNAMIC.core.plants import Plant
+from KoNAMIC.core.scenarios import ScenarioGenerator
+from KoNAMIC.core.simulation import BaselineClosedLoopSimulator, build_time_grid
 from KoNAMIC.viz import plot_dataset_diagnostics
-
-from .sensor_generation_config import SensorGenerationConfig
 from .sensor_split_dataset import SensorSplitDataset
-from .trajectory_profiles import get_profile, select_one_traj_per_profile
-from .initial_conditions import sample_initial_condition
-from .references.api import generate_reference
-from .references.controller_reference import build_controller_reference
-from .simulation import simulate_trajectory
+from .diagnostic_selections import select_one_traj_per_profile
 from .metadata import build_metadata
+from .config import SensorGenerationConfig
+from .trajectory_adapter import closed_loop_trajectory_to_sensor_arrays
 
 
-def generate_all_dataset_splits(
+def generate_dataset_splits(
     *,
-    cfg: SensorGenerationConfig,
-    drone: DroneSpec,
+    sensor_gen_config: SensorGenerationConfig,
+    scenario_generator: ScenarioGenerator,
+    system_spec: SystemSpec,
     plant: Plant,
-    controller_factory,
+    controller: BaseController,
     output_path: Path,
+    seed: int,
     plot_debug: bool = False,
 ) -> None:
 
-    for split_idx, (split_name, split_info) in enumerate(cfg.splits.items()):
-        split_cfg = replace(cfg, seed=cfg.seed + split_idx,)
+    save_yaml(
+        sensor_gen_config.to_dict(),
+        "generation_config.yaml",
+        output_path,
+    )
 
-        dataset, metadata = generate_one_dataset_split(
+    time = build_time_grid(sensor_gen_config.dt, sensor_gen_config.t_sim)
+
+    simulator = BaselineClosedLoopSimulator(
+        system_spec=system_spec,
+        plant=plant,
+        controller=controller,
+        dt=sensor_gen_config.dt,
+        t_sim=sensor_gen_config.t_sim,
+    )
+
+    for split_idx, (split_name, split_info) in enumerate(sensor_gen_config.splits.items()):
+        split_cfg = replace(sensor_gen_config, seed=seed + split_idx)
+
+        dataset, metadata = generate_dataset_split(
             config=split_cfg,
-            drone=drone,
-            plant=plant,
-            controller_factory=controller_factory,
+            simulator=simulator,
+            system_spec=system_spec,
+            scenario_generator=scenario_generator,
             split=split_name,
             num_traj=split_info.num_traj,
+            time=time,
         )
 
         file_path = output_path / f"{split_name}.npz"
@@ -50,96 +72,74 @@ def generate_all_dataset_splits(
             inputs=dataset.inputs,
             statesRef=dataset.states_ref,
             timeVec=dataset.time,
+            profiles=np.array(dataset.profiles, dtype=object),
             metadata=np.array(metadata, dtype=object),
         )
 
         if plot_debug:
-            traj_indices = select_one_traj_per_profile(
-                config=split_cfg,
-                num_traj=split_info.num_traj,
-                drone=drone,
-            )
+            traj_indices = select_one_traj_per_profile(dataset.profiles)
 
             plot_dataset_diagnostics(
                 dataset=dataset,
-                drone=drone,
+                system=system_spec,
                 save_dir=output_path / "diagnostics",
                 split_name=split_name,
                 traj_indices=traj_indices,
-                only_positions=True,
+                only_positions=False,
+                num_columns_states=2,
+                num_columns_inputs=1,
             )
 
 
-def generate_one_dataset_split(
+def generate_dataset_split(
     config: SensorGenerationConfig,
-    drone: DroneSpec,
-    plant: Plant,
-    controller_factory,
+    scenario_generator: ScenarioGenerator,
+    simulator: BaselineClosedLoopSimulator,
+    system_spec: SystemSpec,
     split: str,
     num_traj: int,
+    time: np.ndarray,
 ) -> tuple[SensorSplitDataset, dict]:
 
-    rng = np.random.default_rng(config.seed)
-    time = np.arange(0.0, config.t_sim + config.dt / 2.0, config.dt)
     n_steps = len(time)
+    states = np.zeros((num_traj, n_steps, system_spec.state_dim), dtype=float)
+    inputs = np.zeros((num_traj, n_steps - 1, system_spec.input_dim), dtype=float)
+    states_ref = np.zeros((num_traj, n_steps, system_spec.state_dim), dtype=float)
+    profiles: list[str] = []
 
-    states = np.zeros((num_traj, n_steps, drone.x_dim), dtype=float)
-    inputs = np.zeros((num_traj, n_steps-1, drone.u_dim), dtype=float)
-    states_ref = np.zeros((num_traj, n_steps, drone.x_dim), dtype=float)
-
-    for i in tqdm(range(num_traj), desc="Generating sensor trajectories"):
-        profile = get_profile(config, i, num_traj, drone)
-        x0 = sample_initial_condition(config,profile,rng,drone)
-
-        # Improve these two functions names:
-        ref_user = generate_reference(
-            cfg=config,
+    for i in tqdm(range(num_traj), desc=f"Generating {split} sensor trajectories"):
+        scenario = scenario_generator.sample(
+            index=i,
+            num_traj=num_traj,
             time=time,
-            profile=profile,
-            x0=x0,
-            rng=rng,
-            drone=drone,
         )
 
-        ref_controller = build_controller_reference(ref_user, drone)
-        controller = controller_factory()
+        profile = scenario.metadata.get("profile")
+        if profile is None:
+            raise KeyError(
+                f"Scenario {i} has no 'profile' entry in metadata. "
+                f"Scenario name: {scenario.name!r}"
+            )
+        profiles.append(str(profile))
+        closed_loop_result = simulator.run(scenario)
 
-        result = simulate_trajectory(
-            plant=plant,
-            controller=controller,
-            x0=x0,
-            ref_controller=ref_controller,
-            time=time,
-            drone=drone,
+        traj = closed_loop_trajectory_to_sensor_arrays(
+            closed_loop_result,
+            system_spec=system_spec,
+            expected_num_steps=n_steps,
         )
 
-        if result.states.shape != (n_steps, drone.x_dim):
-            raise ValueError(
-                f"Invalid states shape for trajectory {i}: "
-                f"expected {(n_steps, drone.x_dim)}, got {result.states.shape}"
-            )
-
-        if result.inputs.shape != (n_steps-1, drone.u_dim):
-            raise ValueError(
-                f"Invalid inputs shape for trajectory {i}: "
-                f"expected {(n_steps, drone.u_dim)}, got {result.inputs.shape}"
-            )
-
-        if result.states_ref.shape != (n_steps, drone.x_dim):
-            raise ValueError(
-                f"Invalid states_ref shape for trajectory {i}: "
-                f"expected {(n_steps, drone.x_dim)}, got {result.states_ref.shape}"
-            )
-
-        states[i] = result.states
-        inputs[i] = result.inputs
-        states_ref[i] = result.states_ref
+        states[i] = traj.states
+        inputs[i] = traj.inputs
+        states_ref[i] = traj.states_ref
 
     dataset = SensorSplitDataset(
         states=states,
         inputs=inputs,
         states_ref=states_ref,
         time=time,
+        profiles=tuple(profiles),
     )
-    metadata = build_metadata(dataset, config, split, drone)
+
+    metadata = build_metadata(dataset, config, split, system_spec)
     return dataset, metadata

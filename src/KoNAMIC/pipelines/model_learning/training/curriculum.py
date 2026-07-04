@@ -1,49 +1,52 @@
 from dataclasses import dataclass
-from typing import Optional, Sequence
+
+from .trainer_config import CurriculumConfig
+
 
 @dataclass
-class RampConfig:
+class RampState:
     """
-    Ramp schedule configuration.
+    Mutable ramp schedule state.
 
     Attributes:
-        start_epoch (Optional[int]): Epoch index where the ramp starts;
+        start_epoch: Epoch index where the ramp starts;
             None means "not yet started".
-        duration (int): Number of epochs to ramp from 0 to 1
+        duration: Number of epochs to ramp from 0 to 1
             (clamped to [0, 1] during evaluation).
     """
-    start_epoch: Optional[int]
+    start_epoch: int | None
     duration: int
 
+
 @dataclass
-class CurriculumCfg:
+class CurriculumState:
     """
-    Configuration du curriculum d'entraînement.
+    Runtime state for curriculum activation and loss ramps.
     """
-    epoch_triggers: Sequence[Optional[int]]
-    ramp_c: RampConfig
-    ramp_a: RampConfig
+    epoch_triggers: tuple[int, ...]
+    ramp_c: RampState
+    ramp_a: RampState
 
 
 class CurriculumManager:
     """
     Gère l'activation des phases de curriculum et les poids effectifs de certaines pertes.
     """
-    def __init__(self, curriculum_params: dict):
-        self.cfg = CurriculumCfg(
-            epoch_triggers=tuple(curriculum_params["phase_epoch_triggers"]),
-            ramp_c=RampConfig(None, curriculum_params["ramp_duration"]),
-            ramp_a=RampConfig(None, curriculum_params["ramp_duration"]),
+    def __init__(self, curriculum_params: CurriculumConfig):
+        self.state = CurriculumState(
+            epoch_triggers=tuple(curriculum_params.phase_epoch_triggers),
+            ramp_c=RampState(None, curriculum_params.ramp_duration),
+            ramp_a=RampState(None, curriculum_params.ramp_duration),
         )
 
-        self.phases_active = [False] * len(self.cfg.epoch_triggers)
+        self.phases_active = [False] * len(self.state.epoch_triggers)
 
     def maybe_activate_phases(self, epoch: int) -> None:
         """
         Active les phases dont l'epoch de déclenchement est atteint.
         """
-        for idx, trigger_epoch in enumerate(self.cfg.epoch_triggers):
-            if self.phases_active[idx]: # Phase déjà active -> on passe
+        for idx, trigger_epoch in enumerate(self.state.epoch_triggers):
+            if self.phases_active[idx]:
                 continue
 
             if epoch >= trigger_epoch:
@@ -53,8 +56,8 @@ class CurriculumManager:
         """Active la phase d'indice idx et initialise les rampes si nécessaire."""
         self.phases_active[idx] = True
         if idx == 0:
-            self.cfg.ramp_c.start_epoch = epoch
-            self.cfg.ramp_a.start_epoch = epoch
+            self.state.ramp_c.start_epoch = epoch
+            self.state.ramp_a.start_epoch = epoch
 
     def current_phase_index(self) -> int:
         """
@@ -69,18 +72,18 @@ class CurriculumManager:
         """
         if not self.phases_active[0]:
             return 0.0
-        ramp_cfg = self.cfg.ramp_c if key == "c" else self.cfg.ramp_a
+        ramp_cfg = self.state.ramp_c if key == "c" else self.state.ramp_a
         ramp_factor = _linear_ramp(epoch, ramp_cfg.start_epoch, ramp_cfg.duration)
         return base * ramp_factor
 
 
-def _linear_ramp(t: int, t0: int, duration: int) -> float:
+def _linear_ramp(t: int, t0: int | None, duration: int) -> float:
     """
     Linear ramp from 0 to 1 over `duration` epochs starting at `t0`.
 
     Args:
         t (int): Current epoch.
-        t0 (int): Start epoch (None means not started yet).
+        t0: Start epoch; None means not started yet.
         duration (int): Ramp length in epochs. Non-positive duration yields 1.0.
 
     Returns:

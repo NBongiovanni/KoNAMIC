@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from torch import Tensor
 from typing import Optional
 
+
 @dataclass
 class Pred:
     """

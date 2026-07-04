@@ -1,22 +1,23 @@
-from tqdm import tqdm
 import multiprocessing
 from pathlib import Path
 
+from tqdm import tqdm
+
 from KoNAMIC.core.rendering.quadrotor.drawer_2d import QuadDrawer2D
 from KoNAMIC.core.rendering.quadrotor.drawer_3d_multi_views import QuadDrawer3DNViews
-from .vision_generation_config import VisionGenerationConfig
+from .config import VisionGenerationConfig
 
-from KoNAMIC.core.utils import DatasetPaths
+from KoNAMIC.paths import DatasetPaths
 
 class VisionDatasetRenderer:
     def __init__(
             self,
-            params: VisionGenerationConfig,
+            config: VisionGenerationConfig,
             dataset_path: DatasetPaths,
             phase: str,
             raw_data: dict,
     ):
-        self.params = params
+        self.params = config
         self.phase = phase
         self.dataset_states = raw_data["x"]
         self.dataset_inputs = raw_data["u"]
@@ -24,12 +25,12 @@ class VisionDatasetRenderer:
         self.num_traj = self.dataset_states.shape[0]
         self.num_steps_total = self.dataset_states.shape[1]
 
-        if params.drone_dim == 2:
-            self.drawer = QuadDrawer2D(params.resolution, 128)
-        elif params.drone_dim == 3:
-            self.drawer = QuadDrawer3DNViews(params.resolution, thickness=1, save_size=128)
+        if config.drone_dim == 2:
+            self.drawer = QuadDrawer2D(config.resolution, 128)
+        elif config.drone_dim == 3:
+            self.drawer = QuadDrawer3DNViews(config.resolution, thickness=1, save_size=128)
         else:
-            raise ValueError(f"Unknown drone dimension: {params.drone_dim}")
+            raise ValueError(f"Unknown drone dimension: {config.drone_dim}")
 
     def generate_raw_images(self) -> None:
         print(self.phase + " data_generation: raw image generation started")

@@ -6,19 +6,14 @@ from torch import nn
 
 
 def _make_activation(act: str) -> Callable[[], nn.Module] | None:
-    print("act")
     act = act.lower()
     if act == "relu":
-        print("RELU")
         return lambda: nn.ReLU(inplace=True)
     if act == "tanh":
-        print("TANH")
         return lambda: nn.Tanh()
     if act == "gelu":
-        print("GELU")
         return lambda: nn.GELU()
     if act == "leaky_relu":
-        print("LEAKYRELU")
         return lambda: nn.LeakyReLU(negative_slope=0.01, inplace=True)
     if act in {"identity", "linear", "none"}:
         return None

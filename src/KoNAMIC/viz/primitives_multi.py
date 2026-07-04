@@ -39,13 +39,9 @@ def plot_state_multi(
     # --- build a single shared GT (xref) ---
     t0 = runs[0][0]
     x_ref0 = runs[0][1][:, :ref_dim]
-    print("t0", t0.shape)
-    print("xref0", x_ref0.shape)
 
     # If open-loop provides one x_gt per run, ensure they're consistent
     for (t, x_ref, _, tag) in runs[1:]:
-        print("t", t.shape)
-        print("x_ref", x_ref.shape)
         if t.shape != t0.shape or not np.allclose(t, t0, atol=0.0, rtol=0.0):
             raise ValueError("Time vectors differ across model_registry; cannot use a single GT.")
         if x_ref.shape[0] != x_ref0.shape[0]:
@@ -216,7 +212,7 @@ def plot_u_multi_3d(
 
 
 def plot_u_multi(
-        drone_dim: int,
+        system_dim: int,
         axes: Sequence[Axes],
         runs_u: Iterable[tuple[np.ndarray, np.ndarray, str]],
         u_labels: Sequence[str],
@@ -229,7 +225,7 @@ def plot_u_multi(
     assert len(runs_u) > 0
     u_dim = int(runs_u[0][1].shape[1])
 
-    if drone_dim == 2:
+    if system_dim == 2:
         return plot_u_multi_2d(
             axes=axes,
             runs_u=runs_u,
@@ -237,7 +233,7 @@ def plot_u_multi(
             colors=colors,
             show_run_legend=False,
         )
-    elif drone_dim == 3:
+    elif system_dim == 3:
         return plot_u_multi_3d(
             axes=axes,
             runs_u=runs_u,

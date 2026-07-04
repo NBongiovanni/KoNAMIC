@@ -6,30 +6,6 @@ import argparse
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 
-def parse_args_comparison():
-    parser = argparse.ArgumentParser(
-        description="Overlay open-loop simulation results for several stored model configurations."
-    )
-    parser.add_argument(
-        "--preset",
-        type=str,
-        required=True,
-        help="Name of the overlay preset to load from the YAML file.",
-    )
-    parser.add_argument(
-        "--dt",
-        type=float,
-        required=True,
-    )
-    parser.add_argument(
-        "--preset-file",
-        type=Path,
-        default=PROJECT_ROOT / Path("configs/pipelines/eval_comparisons/open_loop.yaml"),
-        help="Path to the YAML file containing overlay figures.",
-    )
-    return parser.parse_args()
-
-
 def parse_args_open_loop_simulation() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run open-loop simulation and render rollouts."
@@ -38,15 +14,43 @@ def parse_args_open_loop_simulation() -> argparse.Namespace:
     parser.add_argument(
         "--modality",
         type=str,
-        choices=["sensor", "vision"],
+        choices=["sensor"],
         required=True,
         help="Input modality.",
     )
     parser.add_argument(
-        "--caseid",
+        "--system-name",
+        type=str,
+        choices=["quadrotor_2d", "quadrotor_3d", "cartpole"],
+        required=True,
+        help="System name.",
+    )
+    parser.add_argument(
+        "--stamp_run",
+        "--stamp-run",
+        dest="stamp_run",
+        type=str,
+        required=True,
+        help="Training run stamp to evaluate.",
+    )
+    parser.add_argument(
+        "--run-status",
+        type=str,
+        choices=["final", "interim"],
+        required=True,
+        help="Training run status.",
+    )
+    parser.add_argument(
+        "--dataset-stamp",
+        type=str,
+        required=True,
+        help="Dataset stamp used to build the evaluation dataloaders.",
+    )
+    parser.add_argument(
+        "--epoch",
         type=int,
         required=True,
-        help="Case identifier.",
+        help="Checkpoint epoch to evaluate.",
     )
     parser.add_argument(
         "--seed",
@@ -75,39 +79,11 @@ def parse_args_open_loop_simulation() -> argparse.Namespace:
         help="Number of rollouts to render.",
     )
     parser.add_argument(
-        "--drone-dim",
-        dest="drone_dim",
-        type=int,
-        help="Drone dimension, only relevant for sensor modality if needed.",
-    )
-    parser.add_argument(
-        "--data_generation-version",
-        dest="dataset_version",
-        type=int,
-        default=None,
-        help="Dataset version, only relevant for vision modality.",
-    )
-    parser.add_argument(
         "--only-position",
         dest="only_position",
-        action="store_true",
-        help="Render only positions.",
-    )
-    parser.add_argument(
-        "--render-vision",
-        dest="render_images",
-        action="store_true",
-        help="Render image trajectories when supported.",
-    )
-    parser.add_argument(
-        "--snapshots",
-        action="store_true",
-        help="Enable snapshots rendering.",
-    )
-
-    parser.set_defaults(
-        only_position=True,
-        snapshots=False,
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Render only position states. Use --no-only-position to render all states.",
     )
 
     return parser.parse_args()

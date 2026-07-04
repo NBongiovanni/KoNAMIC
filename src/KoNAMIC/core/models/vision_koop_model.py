@@ -8,10 +8,10 @@ from KoNAMIC.core.models.nn.auto_encoder import AutoEncoder
 
 
 class VisionKoopModel(BaseKoopModel):
-    def __init__(self, model_params: dict, auto_encoder: AutoEncoder):
-        super().__init__(model_params)
+    def __init__(self, model_config: dict, auto_encoder: AutoEncoder):
+        super().__init__(model_config)
         self.auto_encoder = auto_encoder
-        self.num_views = model_params["num_views"]
+        self.num_views = model_config["num_views"]
 
     # -------- AE I/O (vision) ----------
     def project(self, y: Tensor, u: Tensor) -> Tensor:

@@ -21,18 +21,19 @@ class BaseOpenLoopVisualizer(ABC):
 
     def __init__(
         self,
-        drone_dim: int,
+        system_dim: int,
         dt: float,
         only_position: bool,
         num_columns_states: int,
         num_columns_inputs: int,
         rc_params: Optional[dict] = None,
     ) -> None:
-        assert drone_dim in (2, 3)
+        assert system_dim in (2, 3)
         assert num_columns_states in (1, 2)
         assert num_columns_inputs in (1, 2)
 
-        self.drone_dim = int(drone_dim)
+        self.drone_dim = int(system_dim)
+        self.dt = float(dt)
         self.only_position = bool(only_position)
         self.num_columns_states = int(num_columns_states)
         self.num_columns_inputs = int(num_columns_inputs)
