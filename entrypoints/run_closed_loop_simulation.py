@@ -9,13 +9,13 @@ from KoNAMIC.core.systems import create_system
 from KoNAMIC.core.scenarios import build_scenario_generator, load_scenario_gen_config
 from KoNAMIC.core.control import (
     build_baseline_controller,
-    build_koopman_controller,
     build_default_operating_input,
 )
 from KoNAMIC.core.simulation import KoopmanClosedLoopSimulator, BaselineClosedLoopSimulator
 from KoNAMIC.core.plants import build_plant
-from KoNAMIC.core.models import load_koop_model_for_eval
-from KoNAMIC.core.models.model_config import ModelConfig
+from KoNAMIC.koopman.controllers import build_koopman_controller
+from KoNAMIC.koopman.models import load_koop_model_for_eval
+from KoNAMIC.koopman.models.model_config import ModelConfig
 from KoNAMIC.pipelines.closed_loop_simulation import (
     run_closed_loop_simulations,
     run_closed_loop_visualization,

@@ -4,8 +4,13 @@ import numpy as np
 
 from KoNAMIC.core.systems import SystemSpec
 from KoNAMIC.core.simulation import ClosedLoopTrajectory
-from KoNAMIC.viz import save_figure
-from KoNAMIC.viz.primitives_single import plot_x
+from KoNAMIC.viz import (
+    SingleStateInputPlotData,
+    StatePlotSeries,
+    build_input_plot_groups,
+    render_single_state_input,
+)
+from KoNAMIC.viz.style import COLORS, GT_COLOR
 
 from .base_visualizer import BaseClosedLoopVisualizer
 
@@ -43,44 +48,50 @@ class ClosedLoopSingleVisualizer(BaseClosedLoopVisualizer):
         self.run_with_rc_context()
 
     def _plot(self) -> None:
+        plot_data = self._prepare_plot_data()
+        render_single_state_input(
+            layout_owner=self,
+            plot_data=plot_data,
+            plot_dir=self.plot_dir,
+            filename="states_and_inputs.pdf",
+            state_grid=True,
+        )
+
+    def _prepare_plot_data(self) -> SingleStateInputPlotData:
         time = self.results.time
         x, x_ref, x_labels, x_dim_displayed = self._get_displayed_state_data()
         x, x_ref, x_labels = self._convert_angles_for_display(x, x_ref, x_labels)
 
         u = self.results.inputs_data.u_physical
-        u_labels = self.system_spec.get_u_labels()
-        input_groups = self.system_spec.get_input_plot_groups(group_inputs=True)
+        input_groups = build_input_plot_groups(self.system_spec, group_inputs=True)
 
-        n_inputs = len(input_groups)
-        n_states = x_dim_displayed
-
-        fig, state_axes_grid, state_axes_used, input_axes_grid, input_axes_used = (
-            self._make_states_inputs_layout(
-                n_states=n_states,
-                n_inputs=n_inputs,
-            )
+        return SingleStateInputPlotData(
+            time_x=time,
+            state_series=[
+                StatePlotSeries(
+                    label="Closed-loop",
+                    values=x,
+                    color=COLORS[0],
+                    linestyle="-",
+                ),
+                *(
+                    []
+                    if x_ref is None
+                    else [
+                        StatePlotSeries(
+                            label="Reference",
+                            values=x_ref,
+                            color=GT_COLOR,
+                            linestyle="--",
+                        )
+                    ]
+                ),
+            ],
+            x_labels=x_labels[:x_dim_displayed],
+            time_u=time,
+            u=u,
+            input_groups=input_groups,
         )
-
-        self._plot_states_on_axes(state_axes_used, time, x, x_ref, x_labels)
-        self._plot_inputs_on_axes(
-            input_axes_used,
-            time,
-            u,
-            u_labels,
-            input_groups,
-        )
-
-        self._hide_inner_xlabels_block(
-            axes_grid=state_axes_grid,
-            n_cols=self.num_columns_states,
-        )
-        self._hide_inner_xlabels_block(
-            axes_grid=input_axes_grid,
-            n_cols=self.num_columns_inputs,
-        )
-        self._keep_only_bottom_xlabel(input_axes_grid)
-
-        save_figure(fig, self.plot_dir, "states_and_inputs.pdf")
 
     def _get_displayed_state_data(self):
         x = self.results.x_data.traj
@@ -97,39 +108,6 @@ class ClosedLoopSingleVisualizer(BaseClosedLoopVisualizer):
             x_dim_displayed = x.shape[1]
 
         return x, x_ref, labels, x_dim_displayed
-
-    @staticmethod
-    def _plot_states_on_axes(axes_used, time, x, x_ref, labels) -> None:
-        first = True
-        for i, ax in enumerate(axes_used):
-            plot_x(
-                [ax],
-                time,
-                [labels[i]],
-                x[:, i:i + 1],
-                None if x_ref is None else x_ref[:, i:i + 1],
-                show_legend=first,
-            )
-            ax.grid(True)
-            first = False
-
-    @staticmethod
-    def _plot_inputs_on_axes(axes_used, time, u, labels, input_groups) -> None:
-        for ax, group in zip(axes_used, input_groups):
-            indices = group["indices"]
-            group_label = group["label"]
-
-            for idx in indices:
-                ax.plot(
-                    time[: u.shape[0]],
-                    u[:, idx],
-                    label=labels[idx],
-                    color="gray"
-                )
-
-            ax.set_ylabel(group_label)
-            ax.grid(True)
-            ax.legend()
 
     def _convert_angles_for_display(
             self,

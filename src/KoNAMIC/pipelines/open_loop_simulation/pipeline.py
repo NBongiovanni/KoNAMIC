@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from KoNAMIC import utils
-from KoNAMIC.core.models import ModelConfig
+from KoNAMIC.koopman.models import ModelConfig
 from KoNAMIC.core.systems import SystemSpec
 from KoNAMIC.paths import DatasetPaths, RunPaths
 from KoNAMIC.pipelines.data_preparation import SensorPreparationConfig

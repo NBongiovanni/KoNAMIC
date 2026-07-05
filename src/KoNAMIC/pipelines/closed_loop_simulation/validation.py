@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from KoNAMIC.core.control.config import KmpcControllerConfig
-from KoNAMIC.core.models.model_config import ModelConfig
+from KoNAMIC.koopman.models.model_config import ModelConfig
 
 
 def resolve_kmpc_eval_config(

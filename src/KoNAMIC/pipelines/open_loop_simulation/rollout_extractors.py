@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from KoNAMIC.core.models import SensorValForwardOutputs, VisionValForwardOutputs
+from KoNAMIC.koopman.models import SensorValForwardOutputs, VisionValForwardOutputs
 
 
 def extract_one_rollout_sensor(

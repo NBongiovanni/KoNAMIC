@@ -1,6 +1,6 @@
 import torch
 from torch import Tensor
-from KoNAMIC.core.models import VisionValForwardOutputs
+from KoNAMIC.koopman.models import VisionValForwardOutputs
 
 def _as_numpy(x):
     if torch.is_tensor(x):

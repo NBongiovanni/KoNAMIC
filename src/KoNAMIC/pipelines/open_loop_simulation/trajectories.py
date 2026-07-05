@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 import numpy as np
 
-from KoNAMIC.core.models import SensorValForwardOutputs, VisionValForwardOutputs
+from KoNAMIC.koopman.models import SensorValForwardOutputs, VisionValForwardOutputs
 from KoNAMIC.pipelines.experiment_comparison import TrajectoryComparisonResult
 from KoNAMIC.utils import to_numpy
 

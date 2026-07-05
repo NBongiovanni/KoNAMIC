@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from KoNAMIC.core.systems import SystemSpec
-from KoNAMIC.pipelines.model_learning.losses.classes import OpenLoopLosses
+from KoNAMIC.koopman.training.losses.classes import OpenLoopLosses
 from .backends import MetricsBackend
 from .formatting import format_metric_columns, format_metric_line
 from .scalar_writer import ScalarWriter

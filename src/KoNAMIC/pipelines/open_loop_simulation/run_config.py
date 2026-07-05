@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from KoNAMIC import config, paths
-from KoNAMIC.core.models import ModelConfig
+from KoNAMIC.koopman.models import ModelConfig
 from KoNAMIC.core.systems import SystemSpec
 from KoNAMIC.pipelines.data_preparation import SensorPreparationConfig
 

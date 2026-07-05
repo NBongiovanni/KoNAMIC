@@ -8,8 +8,8 @@ from .plot_series import (
     build_state_overlay_series,
     clip_state_overlay_series,
     prepare_overlay_plot_data,
+    render_comparison_results,
 )
-from .rendering import render_state_input_overlay
 from .result_indices import build_indexed_result_path, resolve_common_result_indices
 from .runner import run_indexed_comparison
 from .sources import (
@@ -37,7 +37,7 @@ __all__ = [
     "clip_state_overlay_series",
     "parse_args_comparison",
     "prepare_overlay_plot_data",
-    "render_state_input_overlay",
+    "render_comparison_results",
     "resolve_common_result_indices",
     "run_indexed_comparison",
 ]

@@ -6,8 +6,9 @@ from typing import Any, Optional
 
 import numpy as np
 
+from KoNAMIC.core.systems import SystemSpec
 from KoNAMIC.utils import to_numpy
-from KoNAMIC.core.models import VisionValForwardOutputs
+from KoNAMIC.koopman.models import VisionValForwardOutputs
 from KoNAMIC.pipelines.experiment_comparison import TrajectoryComparisonResult
 from KoNAMIC.pipelines.open_loop_simulation.trajectories import (
     sensor_output_to_comparison_result,
@@ -22,7 +23,7 @@ from .single_visualizer import SinglePlotExtractors, OpenLoopSingleVisualizer
 @dataclass(frozen=True)
 class RenderOpenLoopConfig:
     modality: str                 # "vision" | "sensor"
-    system_dim: int                # 2 | 3
+    system_spec: SystemSpec
     dt: float
     phase: str
     epoch: int
@@ -77,7 +78,7 @@ def render_open_loop_rollouts(
 
         # 1) State/input plots
         visualizer = OpenLoopSingleVisualizer(
-            system_dim=config.system_dim,
+            system_spec=config.system_spec,
             dt=config.dt,
             num_columns_states=config.num_columns_states,
             num_columns_inputs=config.num_columns_inputs,

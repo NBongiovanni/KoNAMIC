@@ -2,17 +2,14 @@ from pathlib import Path
 from typing import Sequence
 
 from KoNAMIC.viz import (
-    plot_u_multi,
-    plot_state_multi,
+    InputComparisonRenderConfig,
+    StateComparisonRenderConfig,
 )
 
 from KoNAMIC.core.systems import SystemSpec
 from KoNAMIC.pipelines.experiment_comparison import (
-    InputOverlaySeries,
-    StateOverlaySeries,
     TrajectoryComparisonResult,
-    prepare_overlay_plot_data,
-    render_state_input_overlay,
+    render_comparison_results,
 )
 from .base_visualizer import BaseClosedLoopVisualizer
 
@@ -69,59 +66,24 @@ class ClosedLoopMultiVisualizer(BaseClosedLoopVisualizer):
 
         labels_x = self.system.get_x_labels(self.only_position)
         labels_u = self.system.get_u_labels()
-        plot_data = prepare_overlay_plot_data(
-            results=self._results_list,
-            names=self.names,
-            x_labels=labels_x,
-            x_ref_dim=self.x_ref_dim,
-        )
-
-        render_state_input_overlay(
+        render_comparison_results(
             layout_owner=self,
             plot_dir=self.plot_dir,
             filename=self.filename,
-            plot_data=plot_data,
+            results=self._results_list,
+            names=self.names,
+            colors=self.colors,
             x_labels=labels_x,
             u_labels=labels_u,
-            plot_states=self._plot_states_on_axes,
-            plot_inputs=self._plot_inputs_on_axes,
-        )
-
-    def _plot_states_on_axes(
-        self,
-        fig,
-        state_axes_grid,
-        state_axes_used,
-        runs_x: Sequence[StateOverlaySeries],
-        x_labels: Sequence[str],
-        n_ref_disp: int,
-    ) -> None:
-        plot_state_multi(
-            state_axes_used,
-            len(x_labels),
-            runs_x,
-            self.names,
-            x_labels,
-            self.colors,
-            n_ref_disp,
-            "Reference",
-            "MAE",
-            show_metric=True,
-        )
-
-    def _plot_inputs_on_axes(
-        self,
-        fig,
-        input_axes_used,
-        runs_u: Sequence[InputOverlaySeries],
-        u_labels: Sequence[str],
-    ) -> None:
-        plot_u_multi(
-            system_dim=self.system_spec.system_dim,
-            axes=input_axes_used,
-            runs_u=runs_u,
-            u_labels=u_labels,
-            colors=self.colors,
-            grouped_ylabel=r"$\tau$ [N.m]",
-            group_legend_labels=[r"$\tau_1$", r"$\tau_2$", r"$\tau_3$"],
+            x_ref_dim=self.x_ref_dim,
+            state_config=StateComparisonRenderConfig(
+                gt_label="Reference",
+                metric="MAE",
+                show_metric=True,
+            ),
+            input_config=InputComparisonRenderConfig(
+                system_dim=self.system_spec.system_dim,
+                grouped_ylabel=r"$\tau$ [N.m]",
+                group_legend_labels=[r"$\tau_1$", r"$\tau_2$", r"$\tau_3$"],
+            ),
         )

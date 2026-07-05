@@ -1,4 +1,4 @@
-from KoNAMIC.pipelines.model_learning.training.trainer_config import (
+from KoNAMIC.koopman.training.trainer_config import (
     CurriculumConfig,
     LoggingConfig,
     OptimizerConfig,

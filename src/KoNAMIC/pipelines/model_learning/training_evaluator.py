@@ -8,7 +8,7 @@ from KoNAMIC import paths
 from KoNAMIC.config import Modality
 from KoNAMIC.core.scenarios import ScenarioGenerator
 from KoNAMIC.core.simulation import compute_closed_loop_metrics
-from KoNAMIC.core.models import SensorKoopModel, VisionKoopModel
+from KoNAMIC.koopman.models import SensorKoopModel, VisionKoopModel
 from KoNAMIC.core.systems import SystemSpec
 from KoNAMIC.core.plants import Plant
 from KoNAMIC.pipelines.closed_loop_simulation import ClosedLoopEvaluator
@@ -19,12 +19,12 @@ from KoNAMIC.pipelines.data_preparation.data_loaders import (
     PreparedDataLoaders,
 )
 
-from .losses.classes import EpochEvalResult
-from .losses.compute_vision import VisionLossComputer
-from .losses.compute_sensor import SensorLossComputer
+from KoNAMIC.koopman.training.losses.classes import EpochEvalResult
+from KoNAMIC.koopman.training.losses.compute_vision import VisionLossComputer
+from KoNAMIC.koopman.training.losses.compute_sensor import SensorLossComputer
 from .config import TrainingPipelineConfig
-from .training.curriculum import CurriculumManager
-from .training.forward_loss_computer import build_forward_loss_computer
+from KoNAMIC.koopman.training.curriculum import CurriculumManager
+from KoNAMIC.koopman.training.forward_loss_computer import build_forward_loss_computer
 
 
 class TrainingEvaluator:

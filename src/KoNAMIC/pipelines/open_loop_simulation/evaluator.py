@@ -9,13 +9,13 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from KoNAMIC import config
-from KoNAMIC.pipelines.model_learning.losses.classes import OpenLoopLosses
-from KoNAMIC.pipelines.model_learning.losses.utils import mean_sub_losses
-from KoNAMIC.core.models.model_config import ModelConfig
+from KoNAMIC.koopman.training.losses.classes import OpenLoopLosses
+from KoNAMIC.koopman.training.losses.utils import mean_sub_losses
+from KoNAMIC.koopman.models.model_config import ModelConfig
 from KoNAMIC.core.scaling import DatasetScalers
 from KoNAMIC.core.systems import SystemSpec
 from KoNAMIC.paths import RunPaths
-from KoNAMIC.pipelines.model_learning.training.forward_loss_computer import (
+from KoNAMIC.koopman.training.forward_loss_computer import (
     SensorForwardLossComputer,
     VisionForwardLossComputer,
 )
@@ -123,7 +123,7 @@ class OpenLoopEvaluator:
         eval_dir = self.run_paths.training_eval_dir("open_loop", epoch) / phase
         render_config = RenderOpenLoopConfig(
             modality=self.modality,
-            system_dim=self.system_spec.system_dim,
+            system_spec=self.system_spec,
             dt=self.model_config.dt,
             phase=phase,
             epoch=epoch,

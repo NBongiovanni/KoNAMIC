@@ -6,6 +6,7 @@ from typing import Sequence
 from matplotlib.axes import Axes
 import numpy as np
 
+from KoNAMIC.viz.state_series import StatePlotSeries
 from KoNAMIC.viz.style import GT_COLOR, COLORS
 
 
@@ -15,6 +16,19 @@ class InputPlotGroup:
     ylabel: str
     legend_labels: tuple[str, ...] | None = None
     linestyles: tuple[str, ...] | None = None
+
+
+@dataclass(frozen=True)
+class InputPlotSeries:
+    time: np.ndarray
+    values: np.ndarray
+    label: str = "Input"
+    color: str = "gray"
+    linestyle: str = "-"
+
+    def __post_init__(self) -> None:
+        if self.values.ndim != 2:
+            raise ValueError(f"values must be 2D, got shape {self.values.shape}.")
 
 
 def plot_x(
@@ -148,6 +162,55 @@ def plot_x_gt(
         axes[0].legend(loc="upper right", fontsize=5)
 
 
+def plot_state_series(
+    axes: Sequence[Axes],
+    time: np.ndarray,
+    state_series: Sequence[StatePlotSeries],
+    labels: Sequence[str],
+    *,
+    show_legend: bool = True,
+    grid: bool = False,
+) -> None:
+    if not state_series:
+        raise ValueError("state_series must contain at least one series.")
+
+    n_dim = len(axes)
+    if len(labels) != n_dim:
+        raise ValueError(f"len(labels) must be {n_dim}, got {len(labels)}.")
+
+    reference_shape = state_series[0].values.shape
+    if reference_shape[1] != n_dim:
+        raise ValueError(
+            f"state series dimension must be {n_dim}, got {reference_shape[1]}."
+        )
+
+    for series in state_series[1:]:
+        if series.values.shape != reference_shape:
+            raise ValueError(
+                "All state series must have the same shape, "
+                f"got {series.values.shape} for {series.label!r} "
+                f"and {reference_shape} for {state_series[0].label!r}."
+            )
+
+    for i, ax in enumerate(axes):
+        for series_idx, series in enumerate(state_series):
+            ax.plot(
+                time[1:],
+                series.values[1:, i],
+                color=series.color or COLORS[series_idx % len(COLORS)],
+                linestyle=series.linestyle,
+                label=series.label,
+            )
+
+        ax.set_ylabel(labels[i])
+        ax.tick_params(labelbottom=False)
+        if grid:
+            ax.grid(True)
+
+    if show_legend:
+        axes[0].legend(loc="upper right", fontsize=5)
+
+
 def plot_u(
     axes: Sequence[Axes],
     time: np.ndarray,
@@ -177,35 +240,62 @@ def plot_u(
               ),
           ]
     """
+    plot_input_series(
+        axes=axes,
+        input_series=[
+            InputPlotSeries(
+                time=time,
+                values=u_traj,
+                label="Input",
+                color="gray",
+                linestyle="-",
+            )
+        ],
+        input_groups=input_groups,
+    )
+
+    axes[-1].set_xlabel("Time [s]")
+
+
+def plot_input_series(
+    axes: Sequence[Axes],
+    input_series: Sequence[InputPlotSeries],
+    input_groups: Sequence[InputPlotGroup],
+    *,
+    show_series_legend: bool = False,
+) -> None:
     if len(axes) != len(input_groups):
         raise ValueError(
             f"Expected one axis per input group: "
             f"len(axes)={len(axes)}, len(input_groups)={len(input_groups)}."
         )
+    if not input_series:
+        raise ValueError("input_series must contain at least one series.")
 
-    if u_traj.ndim != 2:
-        raise ValueError(f"u_traj must be 2D, got shape {u_traj.shape}.")
-
-    u_dim = u_traj.shape[1]
+    u_dim = input_series[0].values.shape[1]
+    for series in input_series[1:]:
+        if series.values.shape[1] != u_dim:
+            raise ValueError(
+                "All input series must have the same input dimension, "
+                f"got {series.values.shape[1]} and {u_dim}."
+            )
 
     for ax, group in zip(axes, input_groups):
-        _plot_input_group(
+        _plot_input_group_series(
             ax=ax,
-            time=time,
-            u_traj=u_traj,
+            input_series=input_series,
             group=group,
             u_dim=u_dim,
+            show_series_legend=show_series_legend,
         )
 
-    axes[-1].set_xlabel("Time [s]")
 
-
-def _plot_input_group(
+def _plot_input_group_series(
     ax: Axes,
-    time: np.ndarray,
-    u_traj: np.ndarray,
+    input_series: Sequence[InputPlotSeries],
     group: InputPlotGroup,
     u_dim: int,
+    show_series_legend: bool,
 ) -> None:
     if len(group.indices) == 0:
         raise ValueError("InputPlotGroup.indices must contain at least one index.")
@@ -224,26 +314,70 @@ def _plot_input_group(
 
     linestyles = _get_linestyles(group)
 
-    for k, input_idx in enumerate(group.indices):
-        label = None
-        if group.legend_labels is not None:
-            label = group.legend_labels[k]
+    for series in input_series:
+        time = _align_input_time(series.time, series.values)
+        for k, input_idx in enumerate(group.indices):
+            label = _build_input_label(
+                series=series,
+                component_label=None if group.legend_labels is None else group.legend_labels[k],
+                show_series_legend=show_series_legend,
+            )
 
-        ax.plot(
-            time[:-1],
-            u_traj[:, input_idx],
-            color="gray",
-            linestyle=linestyles[k],
-            label=label,
-        )
+            ax.plot(
+                time,
+                series.values[:, input_idx],
+                color=series.color,
+                linestyle=series.linestyle if len(group.indices) == 1 else linestyles[k],
+                label=label,
+            )
 
     ax.set_ylabel(group.ylabel)
     ax.grid(True, which="major", axis="both", alpha=0.25)
     ax.set_axisbelow(True)
     ax.yaxis.get_major_formatter().set_powerlimits((0, 0))
 
-    if group.legend_labels is not None:
-        ax.legend(loc="upper right", fontsize=5)
+    if group.legend_labels is not None or show_series_legend:
+        _set_unique_legend(ax)
+
+
+def _align_input_time(time: np.ndarray, values: np.ndarray) -> np.ndarray:
+    if time.shape[0] == values.shape[0]:
+        return time
+    if time.shape[0] == values.shape[0] + 1:
+        return time[:-1]
+    raise ValueError(
+        "Input time must have either the same length as values or one extra sample, "
+        f"got time length {time.shape[0]} and values length {values.shape[0]}."
+    )
+
+
+def _set_unique_legend(ax: Axes) -> None:
+    handles, labels = ax.get_legend_handles_labels()
+    unique_handles = []
+    unique_labels = []
+    seen = set()
+    for handle, label in zip(handles, labels):
+        if label in seen:
+            continue
+        seen.add(label)
+        unique_handles.append(handle)
+        unique_labels.append(label)
+
+    if unique_labels:
+        ax.legend(unique_handles, unique_labels, loc="upper right", fontsize=5)
+
+
+def _build_input_label(
+    *,
+    series: InputPlotSeries,
+    component_label: str | None,
+    show_series_legend: bool,
+) -> str | None:
+    if component_label is None:
+        return series.label if show_series_legend else None
+    if show_series_legend:
+        return f"{series.label} {component_label}"
+    return component_label
 
 
 def _get_linestyles(group: InputPlotGroup) -> tuple[str, ...]:

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from KoNAMIC import config
-from KoNAMIC.core.models.model_config import ModelConfig
+from KoNAMIC.koopman.models.model_config import ModelConfig
 from KoNAMIC.pipelines.closed_loop_simulation.config import ClosedLoopEvalConfig
 
 

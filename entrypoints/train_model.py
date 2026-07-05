@@ -6,7 +6,7 @@ matplotlib.use("Agg")
 
 from KoNAMIC import paths, utils, config
 from KoNAMIC.core.systems import create_system
-from KoNAMIC.core.models import build_model
+from KoNAMIC.koopman.models import build_model
 from KoNAMIC.core.plants import build_plant
 from KoNAMIC.core.scenarios import build_scenario_generator, load_scenario_gen_config
 from KoNAMIC.core.scaling import DatasetScalers
@@ -46,7 +46,11 @@ def main() -> None:
     utils.set_seed(args.seed)
 
     system_spec = create_system(args.system_name)
-    run_stamp = paths.create_run_stamp(args.latent_dynamics, args.id, logger)
+    run_stamp = (
+        args.stamp_run
+        if args.stamp_run is not None
+        else paths.create_run_stamp(args.latent_dynamics, args.id, logger)
+    )
 
     # -------------------------------------------------------------------------
     # Paths and configuration

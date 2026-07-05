@@ -6,9 +6,15 @@ from pathlib import Path
 
 import numpy as np
 
-from KoNAMIC.core.systems.drone.labels import get_u_labels, get_x_labels
-from KoNAMIC.viz.primitives_single import InputPlotGroup, plot_x, plot_u
-from KoNAMIC.viz.style import save_figure
+from KoNAMIC.core.systems import SystemSpec
+from KoNAMIC.viz import (
+    SingleStateInputPlotData,
+    StatePlotSeries,
+    build_input_plot_groups,
+    render_single_state_input,
+)
+from KoNAMIC.viz.primitives_single import InputPlotGroup
+from KoNAMIC.viz.style import COLORS, GT_COLOR
 
 from .base_visualizer import BaseOpenLoopVisualizer
 
@@ -26,7 +32,7 @@ class SinglePlotExtractors:
 class OpenLoopSingleVisualizer(BaseOpenLoopVisualizer):
     def __init__(
         self,
-        system_dim: int,
+        system_spec: SystemSpec,
         dt: float,
         num_columns_states: int,
         num_columns_inputs: int,
@@ -35,12 +41,13 @@ class OpenLoopSingleVisualizer(BaseOpenLoopVisualizer):
         extractors: SinglePlotExtractors,
     ) -> None:
         super().__init__(
-            system_dim=system_dim,
+            system_dim=system_spec.system_dim,
             dt=dt,
             only_position=only_position,
             num_columns_states=num_columns_states,
             num_columns_inputs=num_columns_inputs,
         )
+        self.system_spec = system_spec
         self.path = Path(path)
         self.extractors = extractors
         self.output: Any = None
@@ -51,6 +58,15 @@ class OpenLoopSingleVisualizer(BaseOpenLoopVisualizer):
         self.run_with_rc_context()
 
     def _plot(self) -> None:
+        plot_data = self._prepare_plot_data()
+        render_single_state_input(
+            layout_owner=self,
+            plot_data=plot_data,
+            plot_dir=self.path,
+            filename="states_and_inputs.pdf",
+        )
+
+    def _prepare_plot_data(self) -> SingleStateInputPlotData:
         x_gt, x_pred, time_x, x_labels = self._prepare_state_plot_data()
         u, time_u, input_groups = self._prepare_input_plot_data()
 
@@ -60,49 +76,40 @@ class OpenLoopSingleVisualizer(BaseOpenLoopVisualizer):
             labels=x_labels,
         )
 
-        n_states = x_gt_disp.shape[1]
-        n_inputs = len(input_groups)
-
-        fig, state_axes_grid, state_axes_used, input_axes_grid, input_axes_used = (
-            self._make_states_inputs_layout(
-                n_states=n_states,
-                n_inputs=n_inputs,
-            )
-        )
-
-        self._plot_states_on_axes(
-            axes_used=state_axes_used,
-            time=time_x,
-            x_gt=x_gt_disp,
-            x_pred=x_pred_disp,
-            labels=x_labels_disp,
-        )
-
-        self._plot_inputs_on_axes(
-            axes_used=input_axes_used,
-            time=time_u,
+        return SingleStateInputPlotData(
+            time_x=time_x,
+            state_series=[
+                *(
+                    []
+                    if x_pred_disp is None
+                    else [
+                        StatePlotSeries(
+                            label="Prediction",
+                            values=x_pred_disp,
+                            color=COLORS[0],
+                            linestyle="-",
+                        )
+                    ]
+                ),
+                StatePlotSeries(
+                    label="Ground truth",
+                    values=x_gt_disp,
+                    color=GT_COLOR,
+                    linestyle="--",
+                ),
+            ],
+            x_labels=x_labels_disp,
+            time_u=time_u,
             u=u,
             input_groups=input_groups,
         )
-
-        self._hide_inner_xlabels_block(
-            axes_grid=state_axes_grid,
-            n_cols=self.num_columns_states,
-        )
-        self._hide_inner_xlabels_block(
-            axes_grid=input_axes_grid,
-            n_cols=self.num_columns_inputs,
-        )
-        self._keep_only_bottom_xlabel(input_axes_grid)
-
-        save_figure(fig, self.path, "states_and_inputs.pdf")
 
     def _prepare_state_plot_data(
         self,
     ) -> tuple[np.ndarray, Optional[np.ndarray], np.ndarray, list[str]]:
         x_gt = self.extractors.get_x_gt(self.output)
         x_pred = self.extractors.get_x_pred(self.output)
-        labels = get_x_labels(self.drone_dim, self.only_position)
+        labels = self.system_spec.get_x_labels(self.only_position)
 
         num_steps = x_gt.shape[0]
         time = np.arange(num_steps) * self.dt
@@ -113,7 +120,7 @@ class OpenLoopSingleVisualizer(BaseOpenLoopVisualizer):
     ) -> tuple[np.ndarray, np.ndarray, list[InputPlotGroup]]:
         u = self.extractors.get_u(self.output)
         time = np.arange(u.shape[0] + 1) * self.dt
-        return u, time, _get_input_plot_groups(self.drone_dim)
+        return u, time, build_input_plot_groups(self.system_spec, group_inputs=True)
 
     def _get_displayed_state_data(
         self,
@@ -129,57 +136,3 @@ class OpenLoopSingleVisualizer(BaseOpenLoopVisualizer):
         x_pred_disp = None if x_pred is None else x_pred[:, :x_dim_displayed]
         labels_disp = labels[:x_dim_displayed]
         return x_gt_disp, x_pred_disp, labels_disp
-
-    def _plot_states_on_axes(
-        self,
-        axes_used: list,
-        time: np.ndarray,
-        x_gt: np.ndarray,
-        x_pred: Optional[np.ndarray],
-        labels: list[str],
-    ) -> None:
-        first = True
-        for i, ax in enumerate(axes_used):
-            plot_x(
-                [ax],
-                time,
-                [labels[i]],
-                None if x_pred is None else x_pred[:, i:i + 1],
-                x_gt[:, i:i + 1],
-                show_legend=first,
-                label_main="Prediction",
-                label_other="Ground truth",
-            )
-            first = False
-
-    def _plot_inputs_on_axes(
-        self,
-        axes_used: list,
-        time: np.ndarray,
-        u: np.ndarray,
-        input_groups: list[InputPlotGroup],
-    ) -> None:
-        plot_u(axes_used, time, u, input_groups)
-
-
-
-def _get_input_plot_groups(drone_dim: int) -> list[InputPlotGroup]:
-    labels = get_u_labels(drone_dim)
-
-    if drone_dim == 2:
-        return [
-            InputPlotGroup(indices=(0,), ylabel=labels[0]),
-            InputPlotGroup(indices=(1,), ylabel=labels[1]),
-        ]
-
-    if drone_dim == 3:
-        return [
-            InputPlotGroup(indices=(0,), ylabel=labels[0]),
-            InputPlotGroup(
-                indices=(1, 2, 3),
-                ylabel=r"$\tau$ [N$\cdot$m]",
-                legend_labels=(r"$\tau_x$", r"$\tau_y$", r"$\tau_z$"),
-            ),
-        ]
-
-    raise ValueError(f"Invalid drone dimension {drone_dim}")

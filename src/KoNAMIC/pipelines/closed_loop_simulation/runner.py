@@ -4,19 +4,15 @@ import os
 from pathlib import Path
 from typing import Protocol, TypeAlias
 
-import numpy as np
-
 from KoNAMIC import config
 from KoNAMIC.core.control.config import KlqrControllerConfig, KmpcControllerConfig
 from KoNAMIC.core.control.controllers import (
     BaseController,
-    KoopmanLQRController,
-    KoopmanMPCController,
     build_default_operating_input,
 )
-from KoNAMIC.core.control.mpc_solver import AcadosMPCSolver
-from KoNAMIC.core.models import SensorKoopModel, VisionKoopModel
-from KoNAMIC.core.models.model_config import ModelConfig
+from KoNAMIC.koopman.controllers import build_koopman_controller_for_dir
+from KoNAMIC.koopman.models import SensorKoopModel, VisionKoopModel
+from KoNAMIC.koopman.models.model_config import ModelConfig
 from KoNAMIC.core.plants import Plant
 from KoNAMIC.core.scaling import DatasetScalers
 from KoNAMIC.core.scenarios import ScenarioGenerator
@@ -92,63 +88,11 @@ def _build_koopman_closed_loop_controller(
     koop_model: SensorKoopModel | VisionKoopModel,
     scalers: DatasetScalers,
 ) -> BaseController:
-    if isinstance(controller_config, KmpcControllerConfig):
-        return KoopmanMPCController(
-            modality=modality,
-            model_config=model_config,
-            controller_config=controller_config,
-            solver=AcadosMPCSolver(controller_dir, controller_config),
-            koop_model=koop_model,
-            scalers=scalers,
-            control_run_dir=controller_dir,
-        )
-
-    if isinstance(controller_config, KlqrControllerConfig):
-        u_min, u_max = _build_klqr_input_bounds(controller_config, int(koop_model.u_dim))
-        return KoopmanLQRController(
-            model_config=model_config,
-            koop_model=koop_model,
-            scalers=scalers,
-            q_diag=np.asarray(controller_config.q_diag, dtype=float),
-            r_diag=np.asarray(controller_config.r_diag, dtype=float),
-            u_min=u_min,
-            u_max=u_max,
-        )
-
-    raise TypeError(
-        "Unsupported Koopman closed-loop controller config: "
-        f"{type(controller_config).__name__}. Expected KmpcControllerConfig or "
-        "KlqrControllerConfig."
+    return build_koopman_controller_for_dir(
+        modality=modality,
+        controller_dir=controller_dir,
+        model_config=model_config,
+        controller_config=controller_config,
+        koop_model=koop_model,
+        data_scalers=scalers,
     )
-
-
-def _build_klqr_input_bounds(
-    controller_config: KlqrControllerConfig,
-    u_dim: int,
-) -> tuple[np.ndarray | None, np.ndarray | None]:
-    constraints = controller_config.constraints
-    if not constraints.use_inputs_constraints:
-        return None, None
-
-    force_limits = constraints.force_limits
-    torque_limits = constraints.torque_limits
-    if torque_limits is None:
-        raise ValueError("controller.constraints.torque_limits is required for KLQR.")
-
-    if u_dim == 2:
-        u_min = np.array([force_limits[0], torque_limits[0]], dtype=float)
-        u_max = np.array([force_limits[1], torque_limits[1]], dtype=float)
-    elif u_dim == 4:
-        u_min = np.array(
-            [force_limits[0], torque_limits[0], torque_limits[0], torque_limits[0]],
-            dtype=float,
-        )
-        u_max = np.array(
-            [force_limits[1], torque_limits[1], torque_limits[1], torque_limits[1]],
-            dtype=float,
-        )
-    else:
-        raise ValueError(f"Unsupported u_dim={u_dim} for KLQR input bounds.")
-
-    return u_min, u_max
-

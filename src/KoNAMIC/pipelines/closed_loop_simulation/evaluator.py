@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from KoNAMIC import paths, config
 from KoNAMIC.core.control.config import KlqrControllerConfig, KmpcControllerConfig
-from KoNAMIC.core.models.model_config import ModelConfig
-from KoNAMIC.core.models.sensor_koop_model import SensorKoopModel
-from KoNAMIC.core.models.vision_koop_model import VisionKoopModel
+from KoNAMIC.koopman.models.model_config import ModelConfig
+from KoNAMIC.koopman.models.sensor_koop_model import SensorKoopModel
+from KoNAMIC.koopman.models.vision_koop_model import VisionKoopModel
 from KoNAMIC.core.plants import Plant
 from KoNAMIC.core.scenarios import ScenarioGenerator
 from KoNAMIC.core.simulation import ClosedLoopTrajectory, build_time_grid

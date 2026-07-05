@@ -57,7 +57,7 @@ def main() -> None:
     eval_dir = run_paths.standalone_eval_dir("open_loop", stamp_open_loop)
     render_config = RenderOpenLoopConfig(
         modality=modality.key,
-        system_dim=system_spec.system_dim,
+        system_spec=system_spec,
         dt=model_config.dt,
         phase=args.phase,
         epoch=args.epoch,

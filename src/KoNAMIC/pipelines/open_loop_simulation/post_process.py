@@ -6,13 +6,13 @@ from typing import Tuple
 import numpy as np
 import torch
 
-from KoNAMIC.core.models import (
+from KoNAMIC.koopman.models import (
     ModelConfig,
     SensorValForwardOutputs,
     VisionValForwardOutputs,
     load_sensor_koop_model_for_eval,
 )
-from KoNAMIC.core.models.outputs.vision_outputs import GroundTruth
+from KoNAMIC.koopman.models.outputs.vision_outputs import GroundTruth
 from KoNAMIC.core.rendering.features.geometric_features_robust import (
     compute_angles_robust,
     compute_centroids_robust,

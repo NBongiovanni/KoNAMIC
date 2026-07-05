@@ -7,6 +7,7 @@ def build_learning_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Train Koopman model")
     p.add_argument("--modality", choices=Modality.values(), required=True)
     p.add_argument("--id", type=str)
+    p.add_argument("--stamp-run", type=str)
     p.add_argument("--system-name", type=str)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--latent-dynamics", type=str)

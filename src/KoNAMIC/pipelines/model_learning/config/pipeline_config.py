@@ -11,8 +11,8 @@ from KoNAMIC.core.control.config import (
     load_controller_config,
     load_controller_config_from_dict,
 )
-from KoNAMIC.core.models.model_config import ModelConfig
-from KoNAMIC.pipelines.model_learning.training.trainer_config import TrainerConfig
+from KoNAMIC.koopman.models.model_config import ModelConfig
+from KoNAMIC.koopman.training.trainer_config import TrainerConfig
 from KoNAMIC.pipelines.closed_loop_simulation.config import ClosedLoopEvalConfig
 from KoNAMIC.pipelines.open_loop_simulation.config import OpenLoopEvalConfig
 from KoNAMIC.pipelines.data_preparation.sensor.config import SensorPreparationConfig
@@ -154,7 +154,7 @@ class TrainingPipelineConfig:
             "model_config": (
                 config_dir
                 / "components"
-                / "experiments"
+                / "models"
                 / system_name
                 / f"{modality}.yaml"
             ),
