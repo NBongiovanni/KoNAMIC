@@ -322,3 +322,9 @@ N. Bongiovanni, B. Mavkov, R. Martins, and G. Allibert, “Identification and Co
 The manuscript is available on HAL. This repository is also related to the PhD thesis of Nicolas Bongiovanni, conducted at Université Côte d’Azur, CNRS, I3S laboratory. The thesis is not publicly available online yet; a complete reference will be added once it becomes available.
 
 If you use this code or build upon this work, please cite the paper above.
+
+<p align="center">
+  <img src="docs/assets/logos/logo_uca.png" alt="Université Côte d'Azur" height="48">
+  <img src="docs/assets/logos/logo_i3s.png" alt="I3S laboratory" height="48">
+  <img src="docs/assets/logos/logo_icuas.png" alt="International Conference on Unmanned Aircraft Systems" height="48">
+</p>
