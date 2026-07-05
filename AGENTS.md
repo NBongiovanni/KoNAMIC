@@ -3,7 +3,12 @@
 KoNAMIC is a robotics/control project for learning Koopman-based models from sensor or visual data and using them for closed-loop control.
 
 Main architecture:
-- `core/`: reusable systems, plants, controllers, simulation, models.
+- `core/`: reusable systems, plants, generic controllers, simulation, and infrastructure.
+- `koopman/`: Koopman-specific domain code.
+  - `models/`: Koopman model composition, latent dynamics, model configs, checkpoints, and forward-output structures.
+  - `lifting/`: lifting and reconstruction components such as encoders, decoders, MLPs, and auto-encoders.
+  - `controllers/`: Koopman-specific controllers such as KMPC and KLQR.
+  - `training/`: Koopman training loop, training context, checkpoint manager, curriculum, forward-loss computation, and losses.
 - `pipelines/`: task-level orchestration for data generation, training, evaluation.
 - `viz/`: plotting and visualization.
 
@@ -25,6 +30,12 @@ Coding preferences:
 - keep evaluation and training-data generation conceptually separated;
 - `TrainingEvaluator` should evaluate, while closed-loop augmentation should eventually be handled by a dedicated augmenter or runner;
 - use explicit names such as `system_name`, `system_spec`, `plant`, `scenario_generator`.
+
+Dependency boundaries:
+- `core/` should not depend on `koopman/`;
+- Koopman-specific code should live under `koopman/`, not under `core/`;
+- `pipelines/` may orchestrate `core/` and `koopman/`, but should avoid owning Koopman-specific model, controller, or training primitives;
+- keep configs and evaluators in `pipelines/` when they describe experiment orchestration rather than Koopman mechanics.
 
 Design principle:
 - keep simple, testable steps before adding bilinear models, NMPC, vision, or aerodynamic effects.

@@ -6,17 +6,32 @@ KoNAMIC is a research codebase for learning Koopman-inspired dynamical models fr
 
 The repository accompanies the experiments presented in the manuscript. It is primarily intended for transparency, reproducibility, and future extension of the thesis work.
 
-## Repository status
+## Usage conventions
 
-The main training, dataset generation, simulation, and visualization pipelines are provided through dedicated entry points located in the `entrypoints/` directory. Some auxiliary scripts are still being cleaned up after recent refactoring and may require minor adjustments before being executed out of the box.
+The main training, dataset generation, simulation, and visualization pipelines are provided through dedicated entry points located in the `entrypoints/` directory.
 
-In particular:
+Practical notes:
 
 - user-facing workflows should be launched from the scripts in `entrypoints/`;
 - configuration is handled through YAML files and command-line overrides;
 - several internal modules contain a file named `cli.py`, but these files are parser/helper modules and are not meant to be executed directly;
+- the recommended first walkthrough is the local Jupyter notebook `notebooks/01_quad2d_sensor_koopman.ipynb`;
 - model training is handled by a single entry point, `entrypoints/train_model.py`, for both `sensor` and `vision` modalities;
 - comparison between several experiments is handled by a single entry point, `entrypoints/run_experiment_comparison.py`, for both open-loop and closed-loop results.
+
+## Recommended walkthrough notebooks
+
+For a guided first pass through the project, start with the local Jupyter notebooks in `notebooks/`.
+
+| Notebook | Scope |
+|---|---|
+| `notebooks/01_quad2d_sensor_koopman.ipynb` | Recommended first walkthrough for sensor-based Koopman learning and control on `quadrotor_2d`. |
+| `notebooks/02_quad3d_sensor_koopman.ipynb` | Sensor-based Koopman walkthrough for `quadrotor_3d`. |
+| `notebooks/03_quad2d_vision_koopman.ipynb` | Vision-based Koopman walkthrough for `quadrotor_2d`, including optional sensor and vision dataset generation. |
+
+The first notebook is the most complete and should be used as the default entry point for learning the repository structure. It can optionally generate a sensor dataset, launch training, select a trained run, load the learned model, inspect the Koopman matrices, and launch open-loop or closed-loop evaluation.
+
+The notebooks delegate long-running workflows to the same scripts in `entrypoints/`; they are intended as interactive guides and diagnostic surfaces, not as separate implementations of the training or evaluation pipelines.
 
 ## Main workflows
 
@@ -63,11 +78,11 @@ python entrypoints/generate_sensor_dataset.py \
 
 Required arguments are:
 
-| Argument        | Description                                                                                    |
-| --------------- | ---------------------------------------------------------------------------------------------- |
+| Argument        | Description                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------ |
 | `--system-name` | Name of the physical system to simulate, `quadrotor_2d`, `quadrotor_3d`, or `cartpole`. |
-| `--controller`  | Controller used to generate closed-loop trajectories, for example `pid` or `lqr`.              |
-| `--seed`        | Random seed used by the dataset-generation pipeline.                                           |
+| `--controller`  | Controller used to generate closed-loop trajectories, `pid` or `lqr`.              |
+| `--seed`        | Random seed used by the dataset-generation pipeline.                                       |
 
 Examples:
 
@@ -161,15 +176,15 @@ The selected `--modality` determines how the training data are prepared internal
 
 Typical arguments are:
 
-| Argument | Description |
-|---|---|
-| `--modality` | Input modality: usually `sensor` or `vision`. |
-| `--system-name` | System name, for example `quadrotor_2d`, `quadrotor_3d`, or `cartpole`. |
-| `--latent-dynamics` | Latent dynamics structure, for example `linear`, `bilinear`, or another implemented model type. |
-| `--dataset-stamp` | Dataset timestamp used to build the training dataloaders. |
-| `--id` | Identifier used to name the training run. |
-| `--seed` | Random seed. |
-| `--geom_losses` / `--no-geom_losses` | Enable or disable geometric auxiliary losses when supported. |
+| Argument | Description                                                                           |
+|---|---------------------------------------------------------------------------------------|
+| `--modality` | Input modality: usually `sensor` or `vision`.                                         |
+| `--system-name` | System name, `quadrotor_2d`, `quadrotor_3d`, or `cartpole`.                           |
+| `--latent-dynamics` | Latent dynamics structure, `linear`, `bilinear`.                                      |
+| `--dataset-stamp` | Dataset timestamp used to build the training dataloaders.                             |
+| `--id` | Identifier used to name the training run.                                             |
+| `--seed` | Random seed.                                                                          |
+| `--geom_losses` / `--no-geom_losses` | Enable or disable geometric auxiliary losses when supported.                          |
 | `--state_in_z` / `--no-state_in_z` | Enable or disable inclusion of the state in the latent representation when supported. |
 
 Training configurations are loaded according to the selected system and modality. The final resolved configuration is saved with the run outputs.
