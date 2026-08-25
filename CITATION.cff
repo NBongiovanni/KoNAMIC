@@ -1,0 +1,79 @@
+cff-version: 1.2.0
+
+message: >-
+  If you use KoNAMIC, please cite the software and the publication relevant
+  to the workflow or experiment you use.
+
+title: >-
+  KoNAMIC: Koopman Neural Networks for Aerial Modelling, Identification
+  and Control
+
+abstract: >-
+  KoNAMIC is a research software framework for learning Koopman-based
+  dynamical models from sensor and visual data and using them for prediction
+  and closed-loop control.
+
+type: software
+version: 1.0.0
+license: MIT
+repository-code: "https://github.com/NBongiovanni/KoNAMIC"
+
+authors:
+  - family-names: Bongiovanni
+    given-names: Nicolas
+    email: bongiovanni@i3s.unice.fr
+    affiliation: "Université Côte d'Azur, CNRS, I3S"
+    orcid: "https://orcid.org/0009-0009-8150-078X"
+
+keywords:
+  - Koopman operator
+  - neural networks
+  - nonlinear system identification
+  - machine learning
+  - robotics
+  - model predictive control
+  - quadrotor
+
+references:
+  - type: conference-paper
+    title: >-
+      Identification and Control of a Planar Quadrotor from Visual Data
+      Using Koopman Representations
+    authors:
+      - family-names: Bongiovanni
+        given-names: Nicolas
+      - family-names: Mavkov
+        given-names: Bojan
+      - family-names: Martins
+        given-names: Renato
+      - family-names: Allibert
+        given-names: Guillaume
+    collection-title: >-
+      Proceedings of the International Conference on Unmanned Aircraft
+      Systems (ICUAS)
+    conference:
+      name: >-
+        International Conference on Unmanned Aircraft Systems (ICUAS)
+    year: 2026
+    start: 585
+    end: 592
+
+  - type: conference-paper
+    title: >-
+      Data-Driven Nonlinear System Identification of a Throttle Valve
+      Using Koopman Representation
+    authors:
+      - family-names: Bongiovanni
+        given-names: Nicolas
+      - family-names: Mavkov
+        given-names: Bojan
+      - family-names: Martins
+        given-names: Renato
+      - family-names: Allibert
+        given-names: Guillaume
+    collection-title: "Proceedings of the American Control Conference (ACC)"
+    conference:
+      name: "American Control Conference (ACC)"
+    year: 2024
+    start: 92
+    end: 97
